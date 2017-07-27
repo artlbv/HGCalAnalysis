@@ -102,6 +102,27 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 #if cluster.z() == 0:
                 #    print rechits
 
+                ## analyze halo hits
+                #cl_seed = sorted([recHits[rh_idx] for rh_idx in cluster.rechits()], key = lambda rh: rh.rechit
+                cl_seed = recHits[cluster.rechitSeed()]
+                #print cl_seed.x(), cl_seed.y(), cl_seed.energy()
+
+                nclu = sum([cl.layer()==cluster.layer() for cl in clusters])
+                for rh_idx in cluster.rechits():
+                    if rh_idx == cluster.rechitSeed(): continue
+
+                    rh = recHits[rh_idx]
+                    delta = math.hypot(rh.x()-cl_seed.x(), rh.y()-cl_seed.y())
+
+                    if rh.flags() == 0:
+                        #addDataPoint(hist_data,"rh_core_dist",delta)
+                        #addDataPoint(hist_data,"rh_core_dist",(delta,rh.energy()))
+                        addDataPoint(hist_data,"rh_core_dist",(delta,nclu))
+                    else:
+                        #addDataPoint(hist_data,"rh_halo_dist",delta)
+                        #addDataPoint(hist_data,"rh_halo_dist",(delta,rh.energy()))
+                        addDataPoint(hist_data,"rh_halo_dist",(delta,nclu))
+
             rh_coords = [(rh.x(),rh.y(),rh.z()) for rh in rechits]
 
             gr_rh_XYZ = ROOT.TGraph2D(); gr_rh_XYZ.SetMarkerStyle(20)

@@ -7,7 +7,8 @@ from NtupleDataFormat import HGCalNtuple
 
 
 def main():
-    ntuple = HGCalNtuple("/Users/clange/CERNBox/partGun_PDGid211_x120_E80.0To80.0_NTUP_9.root")
+    #ntuple = HGCalNtuple("/Users/clange/CERNBox/partGun_PDGid211_x120_E80.0To80.0_NTUP_9.root")
+    ntuple = HGCalNtuple("../hgcalNtuple-pca.root")
 
     tot_nevents = 0
     tot_genpart = 0
@@ -21,8 +22,10 @@ def main():
     tot_track = 0
 
     for event in ntuple:
+        if tot_nevents >= 10: break
         # print "Event", event.entry()
         tot_nevents += 1
+        '''
         genParts = event.genParticles()
         tot_genpart += len(genParts)
         recHits = event.recHits()
@@ -32,8 +35,10 @@ def main():
             tot_rechit_raw += len(recHitsRaw)
         layerClusters = event.layerClusters()
         tot_cluster2d += len(layerClusters)
+        '''
         multiClusters = event.multiClusters()
         tot_multiclus += len(multiClusters)
+        '''
         simClusters = event.simClusters()
         tot_simcluster += len(simClusters)
         pfClusters = event.pfClusters()
@@ -44,6 +49,11 @@ def main():
         tot_calopart += len(caloParts)
         tracks = event.tracks()
         tot_track += len(tracks)
+        '''
+
+        for multicl in multiClusters:
+            for item in multicl.pcaAxisX: #pxaPosX
+                print item
 
         # for genPart in genParts:
         #     print tot_nevents, "genPart pt:", genPart.pt()

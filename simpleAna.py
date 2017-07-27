@@ -6,7 +6,7 @@ from helperTools import *
 # The purpose of this file is to demonstrate mainly the objects
 # that are in the HGCalNtuple
 
-max_events = 40
+max_events = 10
 
 z_half = +1
 minE = .5
@@ -64,7 +64,10 @@ def main():
 
     col_cnt = 0
 
+    stop_run = False
+
     for event in ntuple:
+        #if stop_run: break
         if tot_nevents >= max_events: break
 
         if tot_nevents % 100 == 0: print("Event %i" % tot_nevents)
@@ -168,6 +171,8 @@ def main():
                 for j,rh_idx in enumerate(cluster.rechits()):
                     rechit = recHits[rh_idx]
 
+                    #if rechit.energy() < 0.1: continue
+
                     #ind = i * len(cluster.rechits()) + j
                     gr_Event_Y.SetPoint(rh_cnt,rechit.x(),rechit.z())
                     gr_Event_X.SetPoint(rh_cnt,rechit.x(),rechit.y())
@@ -188,10 +193,13 @@ def main():
                 mgr_Event_Y.Add(gr_Event_Y)
                 gr2ds.append(gr2d)
             else:
+                print event.event(), event.run(), i_mcl
                 mgr_Event2_X.Add(gr_Event_X)
                 mgr_Event2_Y.Add(gr_Event_Y)
                 gr2d_2s.append(gr2d_2)
 
+
+            stop_run = True
             '''
             for i,cluster in enumerate(clusters):
                 #gr_Event.SetPoint(i+1,cluster.x(),cluster.y(),cluster.z())
