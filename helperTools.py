@@ -8,24 +8,43 @@ def addDataPoint(data,key,point):
 
 def getHisto(values, hname = "hist", htitle = "hist"):
 
-    #nbins = 100
-    nbins = len(values)*10/10
+    if len(values) == 0:
+        print("Error! no values to build histo from!")
+        return 0
+
+    nbins = 100
+    #nbins = len(values)*10/10
 
     # detect value type (1D/2D)
     #if "tuple" in type(values[0]):
     if isinstance(values[0], tuple):
-        #hist_type = "2d"
-        nbins /= 2
 
-        # define histo
-        xmin = min([val[0] for val in values])
-        xmax = max([val[0] for val in values])
-        ymin = min([val[1] for val in values])
-        ymax = max([val[1] for val in values])
-        hist = ROOT.TH2F(hname,htitle,nbins,xmin,xmax,nbins,ymin,ymax)
+        if len(values[0]) == 2:
+            #hist_type = "2d"
+            nbins /= 2
 
-        # fill
-        for val in values: hist.Fill(val[0],val[1])
+            # define histo
+            xmin = min([val[0] for val in values])
+            xmax = max([val[0] for val in values])
+            ymin = min([val[1] for val in values])
+            ymax = max([val[1] for val in values])
+
+            if not xmin > 0:
+                print hname,htitle,nbins,xmin,xmax,nbins,ymin,ymax
+
+            hist = ROOT.TH2F(hname,htitle,nbins,xmin,xmax,nbins,ymin,ymax)
+
+            # fill
+            for val in values: hist.Fill(val[0],val[1])
+        else:
+            gr = ROOT.TGraph2D()
+            gr.SetMarkerStyle(20)
+
+            for i,val in enumerate(values):
+
+                gr.SetPoint(i,val[0],val[1],val[2])
+
+            return gr
 
     else:
         #hist_type = "1d"
