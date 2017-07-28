@@ -14,8 +14,8 @@ minE = .5
 min_pt = 5
 
 min_fbrem = 0.9
-#max_fbrem = 0.1
-max_fbrem = 1.0
+max_fbrem = 0.3
+#max_fbrem = 1.0
 #max_dR = 0.3
 max_dR = 0.3
 
@@ -94,7 +94,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 #if part.gen() > 0: continue
                 if not part.reachedEE(): continue
                 #if part.fbrem() < min_fbrem: continue
-                #if part.fbrem() > max_fbrem: continue
+                if part.fbrem() > max_fbrem: continue
 
                 if multicl.z() * part.eta() < 0: continue
 
@@ -129,11 +129,15 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             addDataPoint(hist_data,"part_mcl_dR",dR)
             #addDataPoint(hist_data,"part_mcl_dR_fbrem",(dR,part.fbrem()))
 
+            if dR > 0.06: continue
 
             #######
             # real vector based stuff
             #######
             if abs(multicl.pcaAxisZ() < 0.1): continue
+
+            ## 0. vector normal for XY plane
+            norm_vect = ROOT.TVector3(0,0,1)
 
             ## 1. get particle propagation vector
             part_vect = ROOT.TVector3(
@@ -155,7 +159,17 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #print part_vect.Angle(mclut_vect), mclut_vect.Angle(part_vect)
             #print multicl.pcaAxisX(),multicl.pcaAxisY(),multicl.pcaAxisZ()
 
+            addDataPoint(hist_data,"part_norm_angle",norm_vect.Angle(part_vect))
+            addDataPoint(hist_data,"mcl_norm_angle",norm_vect.Angle(mclut_vect))
+
             addDataPoint(hist_data,"part_mcl_angle",angle)
+
+
+            addDataPoint(hist_data,"part_norm_angle_eta",(part.eta(),norm_vect.Angle(part_vect)))
+            addDataPoint(hist_data,"mcl_norm_angle_eta",(multicl.eta(),norm_vect.Angle(mclut_vect)))
+            addDataPoint(hist_data,"angle_vs_eta",(part.eta(),angle))
+
+            '''
             addDataPoint(hist_data,"part_mcl_angle_pt",(angle,multicl.pt()))
             addDataPoint(hist_data,"part_mcl_angle_pt_br",(angle,multicl.pt(),part.fbrem()))
 
@@ -165,7 +179,9 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             addDataPoint(hist_data,"dR_vs_angle",(angle,dR))
             #addDataPoint(hist_data,"dR_vs_angle_vs_pt",(angle,dR,multicl.pt()))
-            addDataPoint(hist_data,"dR_vs_angle_vs_ene",(angle,dR,multicl.energy()))
+            #addDataPoint(hist_data,"dR_vs_angle_vs_ene",(angle,dR,multicl.energy()))
+            addDataPoint(hist_data,"angle_vs_eta",(angle,part.eta()))
+            '''
 
 
     print("Found %i gen particles and %i multicl" %(tot_genpart,tot_multiclus))
