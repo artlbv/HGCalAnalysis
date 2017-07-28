@@ -38,6 +38,8 @@ def getHisto(values, hname = "hist", htitle = "hist"):
             for val in values: hist.Fill(val[0],val[1])
         else:
             gr = ROOT.TGraph2D()
+            gr.SetName(hname)
+            gr.SetTitle(hname)
             gr.SetMarkerStyle(20)
 
             for i,val in enumerate(values):

@@ -112,9 +112,10 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             part_tlv = ROOT.TLorentzVector()
             part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
 
-            #if multicl.energy() < minE: continue
+            if multicl.energy() < 1: continue
             #if multicl.pt() < min_pt: continue
             #if multicl.pt() < 10: continue
+            #if multicl.pt() < 1: continue
             #if multicl.z() * part.eta() < 0: continue
 
             mcl_tlv = ROOT.TLorentzVector()
@@ -158,6 +159,14 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             addDataPoint(hist_data,"part_mcl_angle_pt",(angle,multicl.pt()))
             addDataPoint(hist_data,"part_mcl_angle_pt_br",(angle,multicl.pt(),part.fbrem()))
 
+            addDataPoint(hist_data,"part_mcl_angle_pt_br",(angle,multicl.pt(),part.fbrem()))
+            addDataPoint(hist_data,"part_mcl_angle_br",(angle,part.fbrem()))
+            addDataPoint(hist_data,"part_mcl_dR_br",(dR,part.fbrem()))
+
+            addDataPoint(hist_data,"dR_vs_angle",(angle,dR))
+            #addDataPoint(hist_data,"dR_vs_angle_vs_pt",(angle,dR,multicl.pt()))
+            addDataPoint(hist_data,"dR_vs_angle_vs_ene",(angle,dR,multicl.energy()))
+
 
     print("Found %i gen particles and %i multicl" %(tot_genpart,tot_multiclus))
 
@@ -166,6 +175,9 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         print("Plotting hist for data: %s" %data_name)
         canv = ROOT.TCanvas("canv_" + data_name,data_name,800,600)
         hist = getHisto(hist_data[data_name],data_name,data_name)
+        #hist.SetDirectory(0)
+        ROOT.SetOwnership(hist,0)
+
         if "TH" in hist.ClassName():
             hist.Draw("colz")
         elif "TGraph" in hist.ClassName():
