@@ -56,8 +56,9 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             if part.eta() * z_half < 0: continue
             if part.gen() < 1: continue
-            if not part.reachedEE(): continue
-            if part.fbrem() < min_fbrem: continue
+            if part.reachedEE() != 2: continue
+            #if part.fbrem() < min_fbrem: continue
+            #if part.fbrem() < min_fbrem: continue
 
             found_part = True
             tot_genpart += 1
@@ -76,15 +77,25 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         recHits = event.recHits()
         tot_rechit += len(recHits)
 
+        # make lorentz vector for particle
+        part_tlv = ROOT.TLorentzVector()
+        part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
+
         for i_mcl, multicl in enumerate(multiClusters):
-            if multicl.energy() < minE: continue
-            if multicl.pt() < min_pt: continue
+            #if multicl.energy() < minE: continue
+            #if multicl.pt() < min_pt: continue
             if multicl.eta() * part.eta() < 0: continue
-            if len(multicl.cluster2d()) < 3: continue
+            #if len(multicl.cluster2d()) < 3: continue
+            if multicl.NLay() < 3: continue
 
-            dR =  math.hypot(multicl.eta()-part.eta(), multicl.phi()-part.phi())
+            # make vector for cluster
+            mcl_tlv = ROOT.TLorentzVector()
+            mcl_tlv.SetPtEtaPhiE(multicl.pt(), multicl.eta(), multicl.phi(), multicl.energy())
+            dR = part_tlv.DeltaR(mcl_tlv)
 
-            if dR > max_dR: continue
+            #dR =  math.hypot(multicl.eta()-part.eta(), multicl.phi()-part.phi())
+
+            #if dR > max_dR: continue
             tot_multiclus += 1
 
             addDataPoint(hist_data,"part_mcl_dR",dR)
@@ -152,7 +163,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
                 hXZ.Fill(rh.z(),rh.x(),rh.energy())
 
-                if abs(multicl.pcaAxisZ()) > 0.5:
+                #if abs(multicl.pcaAxisZ()) > 0.5:
+                if abs(multicl.siguu()) > 0.001:
                     dr = math.hypot(multicl.eta()-rh.eta(), multicl.phi()-rh.phi())
                     addDataPoint(hist_data,"gd_mcl_rh_dR",dr)
                     drho = math.hypot(multicl.slopeX()-rh.x(), multicl.slopeY()-rh.y())
