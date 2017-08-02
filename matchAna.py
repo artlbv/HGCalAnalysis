@@ -19,6 +19,43 @@ max_fbrem = 0.3
 #max_dR = 0.3
 max_dR = 0.3
 
+def calc_angles_0(point1 = (1,2,3), vect1 = (2,3,4), vect2 = (4,5,6)):
+    v1 = ROOT.TVector3(vect1[0],vect1[1],vect1[2])
+    v2 = ROOT.TVector3(vect2[0],vect2[1],vect2[2])
+
+    ## 1. get radial vector from point
+    v_rad = ROOT.TVector3(point1[0],point1[1],0)
+
+    ## 2. perpendicular vector to r and vect1
+    v_perp = v1.Cross(v_rad)
+
+    ## 3. vertical vector to perp and vect1
+    v_vert = v_perp.Cross(v1)
+
+    ## get angles
+    a_perp = v_perp.Angle(v2)
+    a_vert = v_vert.Angle(v2)
+
+    print a_perp,a_vert
+
+def calc_angles(point,v1,v2):
+
+    ## 1. get radial vector from point
+    v_rad = ROOT.TVector3(point[0],point[1],0)
+
+    ## 2. perpendicular vector to r and vect1
+    v_perp = v1.Cross(v_rad)
+
+    ## 3. vertical vector to perp and vect1
+    v_vert = v_perp.Cross(v1)
+
+    ## get angles
+    a_perp = ROOT.TMath.Pi()/2 - v_perp.Angle(v2)
+    a_vert = ROOT.TMath.Pi()/2 - v_vert.Angle(v2)
+
+    return a_perp,a_vert
+
+
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
 
@@ -52,6 +89,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
         genParts = event.genParticles()
         #tot_genpart += len(genParts)
+
+        '''
         for part in genParts:
 
             #if part.eta() * z_half < 0: continue
@@ -76,7 +115,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             part_angle =  part_vect.Angle(track_vect)
             addDataPoint(hist_data,"part_angle",part_angle)
             #addDataPoint(hist_data,"part_angle_fbrem",(part_angle,part.fbrem()))
-
+        '''
         #continue
 
         multiClusters = event.multiClusters()
@@ -92,14 +131,14 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 #if part.eta() * z_half < 0: continue
                 if part.gen() < 1: continue
                 #if part.gen() > 0: continue
-                if not part.reachedEE(): continue
+                if part.reachedEE() < 2: continue
                 #if part.fbrem() < min_fbrem: continue
-                if part.fbrem() > max_fbrem: continue
+                #if part.fbrem() > max_fbrem: continue
 
                 if multicl.z() * part.eta() < 0: continue
 
                 found_part = True
-                if i_mcl == 0: tot_genpart += 1
+                if i_mcl < 2: tot_genpart += 1
 
                 break
 
@@ -115,7 +154,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             if multicl.energy() < 1: continue
             #if multicl.pt() < min_pt: continue
             #if multicl.pt() < 10: continue
-            #if multicl.pt() < 1: continue
+            if multicl.pt() < 5: continue
             #if multicl.z() * part.eta() < 0: continue
 
             mcl_tlv = ROOT.TLorentzVector()
@@ -126,15 +165,15 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #print dR, dR2
 
             #if dR < 5:
+            if dR > 1: continue
+
             addDataPoint(hist_data,"part_mcl_dR",dR)
             #addDataPoint(hist_data,"part_mcl_dR_fbrem",(dR,part.fbrem()))
-
-            if dR > 0.06: continue
 
             #######
             # real vector based stuff
             #######
-            if abs(multicl.pcaAxisZ() < 0.1): continue
+            #if abs(multicl.pcaAxisZ() < 0.1): continue
 
             ## 0. vector normal for XY plane
             norm_vect = ROOT.TVector3(0,0,1)
@@ -155,6 +194,50 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             #if abs(mclut_vect.Mag()-1) > 0.1: continue
             angle = part_vect.Angle(mclut_vect)
+
+
+            ## Calculate veritcal/perp angles
+            # 1. multicluster center
+            mcl_cent = (multicl.pcaPosX(), multicl.pcaPosY(), multicl.pcaPosZ())
+            a_p,a_v = calc_angles(mcl_cent,mclut_vect,part_vect)
+
+            if abs(a_p) > 0.1 or abs(a_v) > 0.1: continue
+
+            addDataPoint(hist_data,"part_mcl_angle",angle)
+
+            addDataPoint(hist_data,"part_mcl_a_perp",a_p)
+            addDataPoint(hist_data,"part_mcl_a_vert",a_v)
+            addDataPoint(hist_data,"part_mcl_avert_vs_aperp",(a_p,a_v))
+
+            a_comb = math.hypot(a_p,a_v)
+            addDataPoint(hist_data,"part_mcl_a_combined",a_comb)
+
+            addDataPoint(hist_data,"part_mcl_a_perp_pcaZ",(a_p,abs(multicl.pcaAxisZ())))
+            addDataPoint(hist_data,"part_mcl_a_vert_pcaZ",(a_v,abs(multicl.pcaAxisZ())))
+
+            addDataPoint(hist_data,"part_mcl_a_perp_eta",(a_p,abs(multicl.eta())))
+            addDataPoint(hist_data,"part_mcl_a_vert_eta",(a_v,abs(multicl.eta())))
+
+            addDataPoint(hist_data,"part_mcl_a_perp_ene",(a_p,multicl.energy()))
+            addDataPoint(hist_data,"part_mcl_a_vert_ene",(a_v,multicl.energy()))
+
+            addDataPoint(hist_data,"part_mcl_a_perp_fbrem",(a_p,part.fbrem()))
+            addDataPoint(hist_data,"part_mcl_a_vert_fbrem",(a_v,part.fbrem()))
+
+            continue
+
+            ## construct "dR" from dR and angle
+            dR2 = math.hypot(angle,dR)
+            addDataPoint(hist_data,"part_mcl_dR2",dR2)
+
+            if angle > 0.3: continue
+
+            addDataPoint(hist_data,"part_mcl_angle_vs_dR",(dR,angle))
+
+            if dR > 0.06: continue
+
+            addDataPoint(hist_data,"part_mcl_angle",angle)
+
             #print part_vect.Mag(), mclut_vect.Mag()
             #print part_vect.Angle(mclut_vect), mclut_vect.Angle(part_vect)
             #print multicl.pcaAxisX(),multicl.pcaAxisY(),multicl.pcaAxisZ()
@@ -164,12 +247,11 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             addDataPoint(hist_data,"part_mcl_angle",angle)
 
-
+            '''
             addDataPoint(hist_data,"part_norm_angle_eta",(part.eta(),norm_vect.Angle(part_vect)))
             addDataPoint(hist_data,"mcl_norm_angle_eta",(multicl.eta(),norm_vect.Angle(mclut_vect)))
             addDataPoint(hist_data,"angle_vs_eta",(part.eta(),angle))
 
-            '''
             addDataPoint(hist_data,"part_mcl_angle_pt",(angle,multicl.pt()))
             addDataPoint(hist_data,"part_mcl_angle_pt_br",(angle,multicl.pt(),part.fbrem()))
 
@@ -180,8 +262,35 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             addDataPoint(hist_data,"dR_vs_angle",(angle,dR))
             #addDataPoint(hist_data,"dR_vs_angle_vs_pt",(angle,dR,multicl.pt()))
             #addDataPoint(hist_data,"dR_vs_angle_vs_ene",(angle,dR,multicl.energy()))
-            addDataPoint(hist_data,"angle_vs_eta",(angle,part.eta()))
+
+            addDataPoint(hist_data,"siguu_vs_eta",(part.eta(),multicl.siguu()))
+            addDataPoint(hist_data,"sigvv_vs_eta",(part.eta(),multicl.sigvv()))
+
+            addDataPoint(hist_data,"siguu_vs_angle",(angle,multicl.siguu()))
+            addDataPoint(hist_data,"sigvv_vs_angle",(angle,multicl.sigvv()))
             '''
+            addDataPoint(hist_data,"siguu_vs_angle",(angle,multicl.siguu()))
+            addDataPoint(hist_data,"sigvv_vs_angle",(angle,multicl.sigvv()))
+
+            #addDataPoint(hist_data,"hbr_siguu_vs_angle_vs_fbrem",(angle,multicl.siguu(),part.fbrem()))
+            #addDataPoint(hist_data,"hbr_sigvv_vs_angle_vs_fbrem",(angle,multicl.sigvv(),part.fbrem()))
+            addDataPoint(hist_data,"siguu_vs_fbrem",(multicl.siguu(),part.fbrem()))
+            addDataPoint(hist_data,"sigvv_vs_fbrem",(multicl.sigvv(),part.fbrem()))
+            addDataPoint(hist_data,"angle_vs_fbrem",(angle,part.fbrem()))
+
+            addDataPoint(hist_data,"sigvv_vs_fbrem_vs_pt",(multicl.sigvv(),part.fbrem(),multicl.pt()))
+
+            addDataPoint(hist_data,"sigpp_vs_fbrem",(multicl.sigpp(),part.fbrem()))
+            addDataPoint(hist_data,"sigee_vs_fbrem",(multicl.sigee(),part.fbrem()))
+
+            continue
+
+            if part.fbrem() > max_fbrem:
+                addDataPoint(hist_data,"hbr_siguu_vs_angle",(angle,multicl.siguu()))
+                addDataPoint(hist_data,"hbr_sigvv_vs_angle",(angle,multicl.sigvv()))
+            else:
+                addDataPoint(hist_data,"lbr_siguu_vs_angle",(angle,multicl.siguu()))
+                addDataPoint(hist_data,"lbr_sigvv_vs_angle",(angle,multicl.sigvv()))
 
 
     print("Found %i gen particles and %i multicl" %(tot_genpart,tot_multiclus))
@@ -196,8 +305,10 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
         if "TH" in hist.ClassName():
             hist.Draw("colz")
-        elif "TGraph" in hist.ClassName():
+        elif "TGraph2D" in hist.ClassName():
             hist.Draw("pcolz")
+        elif "TGraph" in hist.ClassName():
+            hist.Draw("ap")
         canv.Update()
         #hists.append(hist)
         ROOT.SetOwnership(canv,0)
