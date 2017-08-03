@@ -96,3 +96,42 @@ def calcDeltaRho(particle,cluster):
 
     ### LATER
     ## cluster center: pcaPosZ
+
+def calc_angles(point,v1,v2):
+
+    ## 1. get radial vector from point
+    v_rad = ROOT.TVector3(point[0],point[1],0)
+
+    ## 2. perpendicular vector to r and vect1
+    v_perp = v1.Cross(v_rad)
+
+    ## 3. vertical vector to perp and vect1
+    v_vert = v_perp.Cross(v1)
+
+    ## get angles
+    a_perp = ROOT.TMath.Pi()/2 - v_perp.Angle(v2)
+    a_vert = ROOT.TMath.Pi()/2 - v_vert.Angle(v2)
+
+    return a_perp,a_vert
+
+def get_angles(multicl,part):
+
+    part_vect = ROOT.TVector3(
+        part.posx()[1]-part.posx()[0],
+        part.posy()[1]-part.posy()[0],
+        part.posz()[1]-part.posz()[0],
+    )
+
+    ## 2. get mulcutluster vector
+    mclut_vect = ROOT.TVector3(
+        multicl.pcaAxisX(),
+        multicl.pcaAxisY(),
+        multicl.pcaAxisZ(),
+    )
+
+    ## Calculate veritcal/perp angles
+    # 1. multicluster center
+    mcl_cent = (multicl.pcaPosX(), multicl.pcaPosY(), multicl.pcaPosZ())
+    a_p,a_v = calc_angles(mcl_cent,mclut_vect,part_vect)
+
+    return a_p,a_v
