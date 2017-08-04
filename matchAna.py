@@ -7,7 +7,7 @@ from helperTools import *
 # The purpose of this file is to demonstrate mainly the objects
 # that are in the HGCalNtuple
 
-max_events = 1000
+max_events = 10000
 
 z_half = +1
 minE = .5
@@ -202,13 +202,13 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #if abs(multicl.pcaAxisZ() < 0.1): continue
 
             ## 0. vector normal for XY plane
-            norm_vect = ROOT.TVector3(0,0,1)
+            norm_vect = ROOT.TVector3(0,0,abs(part.eta())/part.eta())
 
             ## 1. get particle propagation vector
             part_vect = ROOT.TVector3(
-                part.posx()[1]-part.posx()[0],
-                part.posy()[1]-part.posy()[0],
-                part.posz()[1]-part.posz()[0],
+                part.posx()[10]-part.posx()[0],
+                part.posy()[10]-part.posy()[0],
+                part.posz()[10]-part.posz()[0],
             )
 
             ## 2. get mulcutluster vector
@@ -220,7 +220,6 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             #if abs(mclut_vect.Mag()-1) > 0.1: continue
             angle = part_vect.Angle(mclut_vect)
-
 
             ## Calculate veritcal/perp angles
             # 1. multicluster center
@@ -243,11 +242,20 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             addDataPoint(hist_data,"part_mcl_a_perp_pcaZ",(a_p,abs(multicl.pcaAxisZ())))
             addDataPoint(hist_data,"part_mcl_a_vert_pcaZ",(a_v,abs(multicl.pcaAxisZ())))
 
+            addDataPoint(hist_data,"part_mcl_pt_eta",(multicl.pt(),abs(multicl.eta())))
+            addDataPoint(hist_data,"part_mcl_pt_peta",(multicl.pt(),abs(part.eta())))
+
             addDataPoint(hist_data,"part_mcl_a_perp_eta",(a_p,abs(multicl.eta())))
             addDataPoint(hist_data,"part_mcl_a_vert_eta",(a_v,abs(multicl.eta())))
 
+            addDataPoint(hist_data,"part_mcl_a_perp_peta",(a_p,abs(part.eta())))
+            addDataPoint(hist_data,"part_mcl_a_vert_peta",(a_v,abs(part.eta())))
+
             addDataPoint(hist_data,"part_mcl_a_perp_ene",(a_p,multicl.energy()))
             addDataPoint(hist_data,"part_mcl_a_vert_ene",(a_v,multicl.energy()))
+
+            addDataPoint(hist_data,"part_mcl_a_p_vs_a_norm",(a_p,norm_vect.Angle(part_vect)))
+            addDataPoint(hist_data,"part_mcl_a_v_vs_a_norm",(a_v,norm_vect.Angle(part_vect)))
 
             addDataPoint(hist_data,"part_mcl_a_perp_fbrem",(a_p,part.fbrem()))
             addDataPoint(hist_data,"part_mcl_a_vert_fbrem",(a_v,part.fbrem()))
