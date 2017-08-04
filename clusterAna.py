@@ -7,7 +7,9 @@ from helperTools import *
 # The purpose of this file is to demonstrate mainly the objects
 # that are in the HGCalNtuple
 
-max_events = 100
+ROOT.gROOT.SetBatch(1)
+
+max_events = 1000
 
 z_half = +1
 minE = .5
@@ -51,10 +53,11 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         genParts = event.genParticles()
         #tot_genpart += len(genParts)
 
+        '''
         found_part = False
         for part in genParts:
 
-            if part.eta() * z_half < 0: continue
+            #if part.eta() * z_half < 0: continue
             if part.gen() < 1: continue
             if part.reachedEE() != 2: continue
             #if part.fbrem() < min_fbrem: continue
@@ -65,6 +68,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             break
 
         if not found_part: continue
+        '''
 
         multiClusters = event.multiClusters()
         #tot_multiclus += len(multiClusters)
@@ -77,16 +81,38 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         recHits = event.recHits()
         tot_rechit += len(recHits)
 
-        # make lorentz vector for particle
-        part_tlv = ROOT.TLorentzVector()
-        part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
-
         for i_mcl, multicl in enumerate(multiClusters):
             #if multicl.energy() < minE: continue
-            #if multicl.pt() < min_pt: continue
-            if multicl.eta() * part.eta() < 0: continue
+            if multicl.pt() < min_pt: continue
             #if len(multicl.cluster2d()) < 3: continue
             if multicl.NLay() < 3: continue
+
+            #if abs(multicl.eta()) > 2.0: continue
+
+            found_part = False
+            for part in genParts:
+
+                #if part.eta() * z_half < 0: continue
+                if part.gen() < 1: continue
+                #if part.gen() > 0: continue
+                if part.reachedEE() < 2: continue
+                #if part.fbrem() < min_fbrem: continue
+                #if part.fbrem() > max_fbrem: continue
+
+                if multicl.z() * part.eta() < 0: continue
+
+                found_part = True
+                if i_mcl < 2: tot_genpart += 1
+
+                break
+
+            if not found_part: continue
+
+            if multicl.eta() * part.eta() < 0: continue
+
+            # make lorentz vector for particle
+            part_tlv = ROOT.TLorentzVector()
+            part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
 
             # make vector for cluster
             mcl_tlv = ROOT.TLorentzVector()
@@ -95,8 +121,16 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             #dR =  math.hypot(multicl.eta()-part.eta(), multicl.phi()-part.phi())
 
-            #if dR > max_dR: continue
+            if dR > max_dR: continue
+
+            a_p,a_v = get_angles(multicl,part)
+            #if abs(a_v) < 0.03: continue
+
             tot_multiclus += 1
+
+            addDataPoint(hist_data,"part_mcl_a_v",a_v)
+
+            if abs(a_v) < 0.03: continue
 
             addDataPoint(hist_data,"part_mcl_dR",dR)
             #addDataPoint(hist_data,"mcl_axisZ",multicl.pcaAxisZ())
@@ -164,7 +198,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 hXZ.Fill(rh.z(),rh.x(),rh.energy())
 
                 #if abs(multicl.pcaAxisZ()) > 0.5:
-                if abs(multicl.siguu()) > 0.001:
+                #if abs(multicl.siguu()) > 0.001:
+                if abs(a_v) < 0.04:
                     dr = math.hypot(multicl.eta()-rh.eta(), multicl.phi()-rh.phi())
                     addDataPoint(hist_data,"gd_mcl_rh_dR",dr)
                     drho = math.hypot(multicl.slopeX()-rh.x(), multicl.slopeY()-rh.y())
@@ -180,9 +215,20 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                     #addDataPoint(hist_data,"bad_mcl_rh_drho_Flag",(drho,rh.flags()))
                     addDataPoint(hist_data,"bad_rh_Flag",rh.flags())
 
-            grtitle = "axisZ %0.2f, event %i" % (abs(multicl.pcaAxisZ()),event.event())
+            '''
+            #grtitle = "axisZ %0.2f, event %i" % (abs(multicl.pcaAxisZ()),event.event())
+            #grtitle = "pcaZ %0.2f, sigvv %0.2f, siguu %0.2f, ev %i" % (abs(multicl.pcaAxisZ()),multicl.sigvv(),multicl.siguu(),event.event())
+            grtitle = "pcaZ %0.2f, sigvv %0.2f, siguu %0.2f, ev %i" % (abs(multicl.pcaAxisZ()),multicl.sigvv(),multicl.siguu(),event.event())
+            grtitle += "\n pcaX %0.1f, pcaY %0.1f, pcaZ %0.1f" %(multicl.pcaPosX(), multicl.pcaPosY(), multicl.pcaPosZ())
+            '''
 
-            if abs(multicl.pcaAxisZ()) > 0.5:
+            #grtitle = "axisZ %0.2f, event %i" % (abs(multicl.pcaAxisZ()),event.event())
+            grtitle = "ev %i, pcaZ %0.2f, sigvv %0.2f, siguu %0.2f" % (event.event(), abs(multicl.pcaAxisZ()),multicl.sigvv(),multicl.siguu())
+            grtitle += "\n a_v %0.3f, a_p %0.3f" %(a_v,a_p)
+
+            #if abs(multicl.pcaAxisZ()) > 0.5:
+            #if abs(multicl.sigvv()) < 1:
+            if abs(a_v) < 0.04:
                 #good_cluster_rechits.append(rh_coords)
                 good_cluster_rechits[event.event()] = rh_coords
 
@@ -191,6 +237,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 grname = "grxyz_good_event_%i" % event.event()
 
             else:
+                print grtitle
                 bad_cluster_rechits[event.event()] = rh_coords
                 #bad_cluster_rechits.append(rh_coords)
 
@@ -231,8 +278,6 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #q = raw_input("Cont..")
         #break
 
-    tfile.Close()
-
     '''
     print "Good clusters"
     for event,rechits in good_cluster_rechits.iteritems():
@@ -242,6 +287,9 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     for event,rechits in bad_cluster_rechits.iteritems():
         print len(rechits)
     '''
+
+    print("Found %i gen particles and %i multicl" %(tot_genpart,tot_multiclus))
+
     hists = []
     for data_name in hist_data:
         print("Plotting hist for data: %s" %data_name)
@@ -250,8 +298,11 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         hist.Draw("colz")
         canv.Update()
         #hists.append(hist)
+        hist.Write()
         ROOT.SetOwnership(canv,0)
     q = raw_input("exit")
+
+    tfile.Close()
 
 if __name__ == "__main__":
 

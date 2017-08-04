@@ -55,6 +55,32 @@ def calc_angles(point,v1,v2):
 
     return a_perp,a_vert
 
+def get_angles(multicl,part):
+
+    part_vect = ROOT.TVector3(
+        part.posx()[1]-part.posx()[0],
+        part.posy()[1]-part.posy()[0],
+        part.posz()[1]-part.posz()[0],
+    )
+
+    ## 2. get mulcutluster vector
+    mclut_vect = ROOT.TVector3(
+        multicl.pcaAxisX(),
+        multicl.pcaAxisY(),
+        multicl.pcaAxisZ(),
+    )
+
+    #if abs(mclut_vect.Mag()-1) > 0.1: continue
+    angle = part_vect.Angle(mclut_vect)
+
+
+    ## Calculate veritcal/perp angles
+    # 1. multicluster center
+    mcl_cent = (multicl.pcaPosX(), multicl.pcaPosY(), multicl.pcaPosZ())
+    a_p,a_v = calc_angles(mcl_cent,mclut_vect,part_vect)
+
+    return a_p,a_v
+
 
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
@@ -122,6 +148,12 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
         for i_mcl, multicl in enumerate(multiClusters):
 
+            if multicl.energy() < 1: continue
+            #if multicl.pt() < min_pt: continue
+            #if multicl.pt() < 10: continue
+            if multicl.pt() < 5: continue
+            #if multicl.z() * part.eta() < 0: continue
+
             #if len(multicl.cluster2d()) < 3: continue
             if multicl.NLay() < 3: continue
 
@@ -150,12 +182,6 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #######
             part_tlv = ROOT.TLorentzVector()
             part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
-
-            if multicl.energy() < 1: continue
-            #if multicl.pt() < min_pt: continue
-            #if multicl.pt() < 10: continue
-            if multicl.pt() < 5: continue
-            #if multicl.z() * part.eta() < 0: continue
 
             mcl_tlv = ROOT.TLorentzVector()
             mcl_tlv.SetPtEtaPhiE(multicl.pt(), multicl.eta(), multicl.phi(), multicl.energy())
@@ -203,6 +229,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             if abs(a_p) > 0.1 or abs(a_v) > 0.1: continue
 
+            tot_multiclus += 1
+
             addDataPoint(hist_data,"part_mcl_angle",angle)
 
             addDataPoint(hist_data,"part_mcl_a_perp",a_p)
@@ -223,6 +251,12 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             addDataPoint(hist_data,"part_mcl_a_perp_fbrem",(a_p,part.fbrem()))
             addDataPoint(hist_data,"part_mcl_a_vert_fbrem",(a_v,part.fbrem()))
+
+            addDataPoint(hist_data,"part_mcl_a_perp_sigu",(a_p,multicl.siguu()))
+            addDataPoint(hist_data,"part_mcl_a_perp_sigv",(a_p,multicl.sigvv()))
+
+            addDataPoint(hist_data,"part_mcl_a_vert_sigu",(a_v,multicl.siguu()))
+            addDataPoint(hist_data,"part_mcl_a_vert_sigv",(a_v,multicl.sigvv()))
 
             continue
 
