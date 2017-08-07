@@ -145,6 +145,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             for irh in rh_ind_sort_z:
                 rh = rechits[irh]
 
+                if rh.flags() > 0: continue
+
                 #if rh.layer() > 28: continue
                 lay_energies[rh.layer()] += rh.energy()
 
@@ -163,6 +165,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #print lay_energies
             #print lay_cumene
 
+            '''
             ## calculate inclination of multicluster to z_axis
             ## 0. vector normal for XY plane
             norm_vect = ROOT.TVector3(0,0,abs(part.eta())/part.eta())
@@ -179,15 +182,20 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             a_norm = norm_vect.Angle(mclut_vect)
 
             cosThets_mcl = math.cos(a_norm)
+
             #print cosThets_mcl, abs(mcl_tlv.CosTheta())
             addDataPoint(hist_data,"cos_vs",(cosThets_mcl, abs(mcl_tlv.CosTheta())))
+            '''
 
             first_z = abs(rechits[rh_ind_sort_z[0]].z())
+            #first_z = min(abs(rh.z()) for rh in rechits)
             ## plot cumulative 50% :
             z_cumul50 = -1
 
             # add points to plot
             for lay,ene in enumerate(lay_energies):
+                if lay > 28: continue
+
                 addDataPoint(hist_data,"ene_prof_lay",(lay,ene))
                 addDataPoint(hist_data,"ene_cumul_lay",(lay,lay_cumene[lay]))
 
@@ -196,9 +204,14 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 # correct z position for cosTheta
                 #z_pos /= abs(mcl_tlv.CosTheta())
                 #z_pos /= abs(part_tlv.CosTheta())
-                #z_pos = (z_pos - first_z) /abs(mcl_tlv.CosTheta()) # / cosThets_mcl
 
-                z_pos = (z_pos - 320.75500) / cosThets_mcl
+                if z_indx > 28: continue
+
+                #z_pos =  z_pos - abs(multicl.pcaPosZ())
+                #z_pos =  z_pos - first_z
+                #z_pos = (z_pos - first_z) /cosThets_mcl
+                #z_pos = (z_pos - first_z) /abs(mcl_tlv.CosTheta())
+                #z_pos = (z_pos - 320.75500) / cosThets_mcl
 
                 ene = z_energies[z_indx]
                 cumul = z_cumene[z_indx]
