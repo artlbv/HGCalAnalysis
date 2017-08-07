@@ -9,7 +9,7 @@ from helperTools import *
 
 #ROOT.gROOT.SetBatch(1)
 
-max_events = 100
+max_events = 1000
 
 z_half = +1
 minE = .5
@@ -164,7 +164,27 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #print lay_cumene
 
             ## calculate inclination of multicluster to z_axis
-            cosThets_mcl = 0
+            ## 0. vector normal for XY plane
+            norm_vect = ROOT.TVector3(0,0,abs(part.eta())/part.eta())
+            ## 1. get mulcutluster vector
+            mclut_vect = ROOT.TVector3(
+                multicl.pcaAxisX(),
+                multicl.pcaAxisY(),
+                multicl.pcaAxisZ(),
+            )
+            # 1. multicluster center
+            mcl_cent = (multicl.pcaPosX(), multicl.pcaPosY(), multicl.pcaPosZ())
+            a_p,a_v = calc_angles(mcl_cent,mclut_vect,norm_vect)
+            a_comb = math.hypot(a_p,a_v)
+            a_norm = norm_vect.Angle(mclut_vect)
+
+            cosThets_mcl = math.cos(a_norm)
+            #print cosThets_mcl, abs(mcl_tlv.CosTheta())
+            addDataPoint(hist_data,"cos_vs",(cosThets_mcl, abs(mcl_tlv.CosTheta())))
+
+            first_z = abs(rechits[rh_ind_sort_z[0]].z())
+            ## plot cumulative 50% :
+            z_cumul50 = -1
 
             # add points to plot
             for lay,ene in enumerate(lay_energies):
@@ -176,11 +196,18 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 # correct z position for cosTheta
                 #z_pos /= abs(mcl_tlv.CosTheta())
                 #z_pos /= abs(part_tlv.CosTheta())
+                #z_pos = (z_pos - first_z) /abs(mcl_tlv.CosTheta()) # / cosThets_mcl
+
+                z_pos = (z_pos - 320.75500) / cosThets_mcl
 
                 ene = z_energies[z_indx]
                 cumul = z_cumene[z_indx]
                 addDataPoint(hist_data,"ene_prof_z",(z_pos,ene))
                 addDataPoint(hist_data,"ene_cumul_z",(z_pos,cumul))
+
+                if z_cumul50 == -1 and cumul > 0.5: z_cumul50 = z_pos
+
+            addDataPoint(hist_data,"z_cumul50",z_cumul50)
 
     print("Found %i gen particles and %i multicl" %(tot_genpart,tot_multiclus))
 
