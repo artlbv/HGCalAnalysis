@@ -22,7 +22,7 @@ max_dR = 0.3
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
 
-    foutname = fname.replace(".root","_sigma.root")
+    foutname = fname.replace(".root","_axis.root")
     tfile = ROOT.TFile(foutname,"recreate")
 
     tot_nevents = 0
@@ -158,8 +158,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             z_front = 320.75500 * part.eta()/abs(part.eta())
             x_entry, y_entry = get_entry_point(mcl_cent,mclut_vect,z_front)
 
-            addDataPoint(hist_data,"mcl_entry_x",x_entry)
-            addDataPoint(hist_data,"mcl_entry_y",y_entry)
+            #addDataPoint(hist_data,"mcl_entry_x",x_entry)
+            #addDataPoint(hist_data,"mcl_entry_y",y_entry)
             addDataPoint(hist_data,"mcl_entry_x_vs_y",(x_entry,y_entry))
 
             entry_vect = ROOT.TVector3(x_entry,y_entry,z_front)
@@ -173,6 +173,13 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             addDataPoint(hist_data,"part_mcl_dR_vs_eta", (abs(part.eta()),dR))
             addDataPoint(hist_data,"part_entr_dR_vs_eta", (abs(part.eta()),dR_entr_part))
             addDataPoint(hist_data,"mcl_entr_dR_vs_eta", (abs(part.eta()),dR_entr_mcl))
+
+            addDataPoint(hist_data,"mcl_entr_dR_vs_part_mcl_dR", (dR,dR_entr_mcl))
+
+            ## propagate particle to cluster centre
+            x_centr, y_centr = get_entry_point(mcl_cent,part_vect,mcl_cent[2])
+            addDataPoint(hist_data,"part_centr_x_vs_y",(x_centr,y_centr))
+
 
             '''
             a_comb = math.hypot(a_p,a_v)
