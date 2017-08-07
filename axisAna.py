@@ -96,7 +96,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             mcl_tlv = ROOT.TLorentzVector()
             mcl_tlv.SetPtEtaPhiE(multicl.pt(), multicl.eta(), multicl.phi(), multicl.energy())
 
-            dR = float(part_tlv.DeltaR(mcl_tlv))
+            dR = part_tlv.DeltaR(mcl_tlv)
 
             #if dR < 5:
             if dR > 1: continue
@@ -177,9 +177,23 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             addDataPoint(hist_data,"mcl_entr_dR_vs_part_mcl_dR", (dR,dR_entr_mcl))
 
             ## propagate particle to cluster centre
-            x_centr, y_centr = get_entry_point(mcl_cent,part_vect,mcl_cent[2])
-            addDataPoint(hist_data,"part_centr_x_vs_y",(x_centr,y_centr))
+            #x_centr, y_centr = get_entry_point(mcl_cent,part_vect,mcl_cent[2])
+            prop_entr = [
+                part.posx()[0],
+                part.posy()[0],
+                part.posz()[0],
+            ]
 
+            x_centr, y_centr = get_entry_point(prop_entr,part_vect,mcl_cent[2])
+            #addDataPoint(hist_data,"part_centr_x_vs_y",(x_centr,y_centr))
+
+            drho = math.hypot(x_centr-mcl_cent[0], y_centr-mcl_cent[1])
+            addDataPoint(hist_data,"part_centr_drho",drho)
+
+            centr_vect = ROOT.TVector3(x_centr,y_centr,mcl_cent[2])
+            dR_cent_mcl = mclut_vect.DeltaR(centr_vect)
+
+            addDataPoint(hist_data,"mcl_cent_dR", dR_cent_mcl)
 
             '''
             a_comb = math.hypot(a_p,a_v)
