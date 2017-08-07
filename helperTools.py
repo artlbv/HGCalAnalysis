@@ -135,3 +135,32 @@ def get_angles(multicl,part):
     a_p,a_v = calc_angles(mcl_cent,mclut_vect,part_vect)
 
     return a_p,a_v
+
+#### axis line equation:
+"""
+point: x0,y0,z0
+vector: a,b,c
+
+eq:
+x = x0 + ta
+y = y0 + tb
+z = z0 + tc
+"""
+
+def get_entry_point(point,axis_vector,plane_z):
+    """
+    z0 = plane_z, solve eq
+
+    t = (z-z0)/c
+    x = x0 + a*t
+    y = y0 + b*t
+    """
+
+    if axis_vector.Z() == 0: return 0
+
+    t = (plane_z - point[2]) / axis_vector.Z()
+    x = point[0] + axis_vector.X() * t
+    y = point[1] + axis_vector.Y() * t
+
+    return x,y
+
