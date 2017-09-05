@@ -74,7 +74,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 #if part.gen() > 0: continue
                 if part.reachedEE() < 2: continue
                 #if part.fbrem() < min_fbrem: continue
-                #if part.fbrem() > max_fbrem: continue
+                if part.fbrem() > max_fbrem: continue
 
                 if multicl.z() * part.eta() < 0: continue
 

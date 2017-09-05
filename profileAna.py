@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+import sys,os
 import ROOT, math
 import numpy as np
 from NtupleDataFormat import HGCalNtuple
@@ -9,7 +9,7 @@ from helperTools import *
 
 #ROOT.gROOT.SetBatch(1)
 
-max_events = 1000
+max_events = 100
 
 z_half = +1
 minE = .5
@@ -23,7 +23,8 @@ max_dR = 0.3
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
 
-    foutname = fname.replace(".root","_profiles.root")
+    #foutname = fname.replace(".root","_profiles.root")
+    foutname = os.path.basename(fname).replace(".root","_profiles.root")
     tfile = ROOT.TFile(foutname,"recreate")
 
     tot_nevents = 0
@@ -102,7 +103,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             mcl_tlv.SetPtEtaPhiE(multicl.pt(), multicl.eta(), multicl.phi(), multicl.energy())
             dR = part_tlv.DeltaR(mcl_tlv)
 
-            #dR =  math.hypot(multicl.eta()-part.eta(), multicl.phi()-part.phi())
+            addDataPoint(hist_data,"part_mcl_dR",dR)
 
             if dR > max_dR: continue
 
@@ -137,7 +138,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             print "z positions", z_positions
             '''
 
-            lay_energies = np.array([0.]*52)
+            lay_energies = np.array([0.]*53)
             #z_energies = [0]*len(z_positions)
             z_energies = np.array([0.]*len(z_positions))
             #z_energies = {z_pos:0 for z_pos in z_positions}
@@ -145,7 +146,10 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             for irh in rh_ind_sort_z:
                 rh = rechits[irh]
 
+                if rh.layer() > 52: continue
                 #if rh.layer() > 28: continue
+                if rh.flags() > 0: continue
+
                 lay_energies[rh.layer()] += rh.energy()
 
                 z_pos = abs(int(rh.z()*10)/10.)
@@ -198,7 +202,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 #z_pos /= abs(part_tlv.CosTheta())
                 #z_pos = (z_pos - first_z) /abs(mcl_tlv.CosTheta()) # / cosThets_mcl
 
-                z_pos = (z_pos - 320.75500) / cosThets_mcl
+                #z_pos = (z_pos - 320.75500) / cosThets_mcl
+                #z_pos = z_pos - abs(multicl.pcaPosZ())
 
                 ene = z_energies[z_indx]
                 cumul = z_cumene[z_indx]

@@ -164,3 +164,13 @@ def get_entry_point(point,axis_vector,plane_z):
 
     return x,y
 
+### layer manipulation
+
+def get_missing_layers(layers):
+
+    cnt = 0
+    for lay in range(min(layers), max(layers)+1):
+        #if lay not in range(5,22): continue
+        if lay not in layers: cnt +=1
+
+    return cnt

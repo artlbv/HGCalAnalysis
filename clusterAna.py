@@ -9,11 +9,11 @@ from helperTools import *
 
 ROOT.gROOT.SetBatch(1)
 
-max_events = 1000
+max_events = 100
 
 z_half = +1
 minE = .5
-min_pt = 5
+min_pt = 1
 
 min_fbrem = 0.9
 #max_dR = 0.3
@@ -22,7 +22,7 @@ max_dR = 0.3
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
 
-    foutname = fname.replace(".root","_plots.root")
+    foutname = fname.replace(".root","_clust.root")
     tfile = ROOT.TFile(foutname,"recreate")
 
     tot_nevents = 0
@@ -85,9 +85,9 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             #if multicl.energy() < minE: continue
             if multicl.pt() < min_pt: continue
             #if len(multicl.cluster2d()) < 3: continue
-            if multicl.NLay() < 3: continue
+            if multicl.NLay() < 10: continue
 
-            #if abs(multicl.eta()) > 2.0: continue
+            if abs(multicl.eta()) > 2.5: continue
 
             found_part = False
             for part in genParts:
@@ -130,7 +130,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             addDataPoint(hist_data,"part_mcl_a_v",a_v)
 
-            if abs(a_v) < 0.03: continue
+            #if abs(a_v) < 0.03: continue
 
             addDataPoint(hist_data,"part_mcl_dR",dR)
             #addDataPoint(hist_data,"mcl_axisZ",multicl.pcaAxisZ())
@@ -138,14 +138,26 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             ## play with cluster layers
             clusters = [layerClusters[clust_idx] for clust_idx in multicl.cluster2d()]
 
-            #gr_rh_XYZ = ROOT.TGraph2D(); gr_rh_XYZ.SetMarkerStyle(20)
+            mis_layers = get_missing_layers([cl.layer() for cl in clusters])
+
+            gr_cl_XYZ = ROOT.TGraph2D();
+            gr_cl_XYZ.SetMarkerStyle(25)
+            gr_cl_XYZ.SetMarkerSize(3)
+            gr_cl_XYZ.SetMarkerColor(9)
 
             ## Rechit plots
             rechits = []
-            for cluster in clusters:
+            for i_cl,cluster in enumerate(clusters):
+
+                if cluster.layer() > 28: continue
+
+                flagsum = sum([1 for rh_idx in cluster.rechits() if recHits[rh_idx].flags() == 0])
+                e_sum = sum([recHits[rh_idx].energy() for rh_idx in cluster.rechits()])
+
+                if flagsum == 0:
+                    print "Halo only cluster", event.event(), cluster.z(), cluster.layer(), e_sum, multicl.pt(), multicl.NLay()
+
                 rechits += [recHits[rh_idx] for rh_idx in cluster.rechits()]# if recHits[rh_idx].flags() == 0]
-                #if cluster.z() == 0:
-                #    print rechits
 
                 ## analyze halo hits
                 #cl_seed = sorted([recHits[rh_idx] for rh_idx in cluster.rechits()], key = lambda rh: rh.rechit
@@ -153,6 +165,10 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 #print cl_seed.x(), cl_seed.y(), cl_seed.energy()
 
                 nclu = sum([cl.layer()==cluster.layer() for cl in clusters])
+
+                gr_cl_XYZ.SetPoint(i_cl, cluster.layer(), cluster.x(), cluster.y())
+
+                '''
                 for rh_idx in cluster.rechits():
                     if rh_idx == cluster.rechitSeed(): continue
 
@@ -167,35 +183,41 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                         #addDataPoint(hist_data,"rh_halo_dist",delta)
                         #addDataPoint(hist_data,"rh_halo_dist",(delta,rh.energy()))
                         addDataPoint(hist_data,"rh_halo_dist",(delta,nclu))
-
-            rh_coords = [(rh.x(),rh.y(),rh.z()) for rh in rechits]
+                '''
+            #rh_coords = [(rh.x(),rh.y(),rh.z()) for rh in rechits]
 
             gr_rh_XYZ = ROOT.TGraph2D(); gr_rh_XYZ.SetMarkerStyle(20)
             gr_rh_XYZ_all = ROOT.TGraph2D(); gr_rh_XYZ_all.SetMarkerStyle(24); gr_rh_XYZ_all.SetMarkerColor(2)
             gr_rh_XZ = ROOT.TGraph(); gr_rh_XZ.SetMarkerStyle(20)
             gr_rh_YZ = ROOT.TGraph(); gr_rh_YZ.SetMarkerStyle(20)
 
-            hXZ = ROOT.TH2F("hXZ_event_%i"%event.event(),"XZ rechits; Z; X",120,320,350,150,-150,150)
+            hXZ = ROOT.TH2F("hXZ_event_%i_%i"% (event.event(),i_mcl),"XZ rechits; Z; X",120,320,350,150,-150,150)
 
             #for i,rh in enumerate(clusters):
             rh_cnt = 0
+            rh_cnt0 = 0
             for i,rh in enumerate(rechits):
 
                 if rh.layer() > 28: continue
                 #if rh.detid() > 1.2 * 10e9: continue
 
-                gr_rh_XYZ_all.SetPoint(i,rh.z(),rh.x(),rh.y())
+                ## filter by distance to cluster axis
+                dist = math.hypot(rh.x() - multicl.pcaPosX(), rh.y() - multicl.pcaPosY())
+                if dist > 100: continue
+
+                gr_rh_XYZ_all.SetPoint(rh_cnt0,rh.layer(),rh.x(),rh.y())
+                rh_cnt0 += 1
 
                 if rh.flags() > 2: print "here"
                 if rh.flags() > 0: continue
 
-                gr_rh_XYZ.SetPoint(rh_cnt,rh.z(),rh.x(),rh.y())
-                gr_rh_XZ.SetPoint(rh_cnt,rh.z(),rh.x())
-                gr_rh_YZ.SetPoint(rh_cnt,rh.z(),rh.y())
+                gr_rh_XYZ.SetPoint(rh_cnt,rh.layer(),rh.x(),rh.y())
+                gr_rh_XZ.SetPoint(rh_cnt,rh.layer(),rh.x())
+                gr_rh_YZ.SetPoint(rh_cnt,rh.layer(),rh.y())
 
                 rh_cnt += 1
 
-                hXZ.Fill(rh.z(),rh.x(),rh.energy())
+                hXZ.Fill(rh.layer(),rh.x(),rh.energy())
 
                 #if abs(multicl.pcaAxisZ()) > 0.5:
                 #if abs(multicl.siguu()) > 0.001:
@@ -223,14 +245,18 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             '''
 
             #grtitle = "axisZ %0.2f, event %i" % (abs(multicl.pcaAxisZ()),event.event())
-            grtitle = "ev %i, pcaZ %0.2f, sigvv %0.2f, siguu %0.2f" % (event.event(), abs(multicl.pcaAxisZ()),multicl.sigvv(),multicl.siguu())
-            grtitle += "\n a_v %0.3f, a_p %0.3f" %(a_v,a_p)
+            #grtitle = "ev %i, pcaZ %0.2f, sigvv %0.2f, siguu %0.2f" % (event.event(), abs(multicl.pcaAxisZ()),multicl.sigvv(),multicl.siguu())
+            #grtitle += "\n a_v %0.3f, a_p %0.3f" %(a_v,a_p)
+            grtitle = "ev %i, energy %0.2f, pt %0.1f" % (event.event(), multicl.energy(),multicl.pt())
+            grtitle += "\n NLay %i, missing %i" %(multicl.NLay(), mis_layers)
 
             #if abs(multicl.pcaAxisZ()) > 0.5:
             #if abs(multicl.sigvv()) < 1:
-            if abs(a_v) < 0.04:
+            #if abs(a_v) < 0.04:
+            #if multicl.NLay() > 23:
+            if mis_layers < 1:
                 #good_cluster_rechits.append(rh_coords)
-                good_cluster_rechits[event.event()] = rh_coords
+                #good_cluster_rechits[event.event()] = rh_coords
 
                 #grtitle = "Good axisZ %f, event %i" % (abs(multicl.pcaAxisZ())event.event())
                 grtitle = "Good " + grtitle
@@ -238,12 +264,14 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             else:
                 print grtitle
-                bad_cluster_rechits[event.event()] = rh_coords
+                #bad_cluster_rechits[event.event()] = rh_coords
                 #bad_cluster_rechits.append(rh_coords)
 
                 #grtitle = "Bad axisZ, event %i" % event.event()
                 grtitle = "Bad " + grtitle
                 grname = "grxyz_bad_event_%i" % event.event()
+
+            grname += "_%i" %i_mcl
 
             gr_rh_XYZ_all.SetTitle(grtitle)
             gr_rh_XYZ_all.SetName(grname)
@@ -252,7 +280,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             canv = ROOT.TCanvas(cname,"Event",1000,800)
             canv.Divide(2,2)
 
-            canv.cd(1); gr_rh_XYZ_all.Draw("p"); gr_rh_XYZ.Draw("p same")
+            canv.cd(1); gr_rh_XYZ_all.Draw("p"); gr_rh_XYZ.Draw("p same"); gr_cl_XYZ.Draw("p same")
             canv.cd(2); gr_rh_XZ.Draw("ap")
             canv.cd(3); gr_rh_YZ.Draw("ap")
             canv.cd(4); hXZ.Draw("colz")
