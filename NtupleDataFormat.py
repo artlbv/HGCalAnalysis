@@ -39,7 +39,7 @@ class _Collection(object):
 
     def __iter__(self):
         """Returns generator for the objects."""
-        for index in xrange(self.size()):
+        for index in range(self.size()):
             yield self._objclass(self._tree, index, self._prefix)
 
 
@@ -62,7 +62,7 @@ class _Object(object):
         """
         super(_Object, self).__init__()
         self._tree = tree
-        self._index = index
+        self._index = int(index)
         self._prefix = prefix
 
     def __getattr__(self, attr):
@@ -131,7 +131,7 @@ class HGCalNtuple(object):
         Generator returns Event objects.
 
         """
-        for jentry in xrange(self._entries):
+        for jentry in range(self._entries):
             # get the next tree in the chain and verify
             ientry = self._tree.LoadTree(jentry)
             if ientry < 0:
@@ -225,6 +225,10 @@ class Event(object):
         """Returns PFClusters object."""
         return PFClusters(self._tree, prefix)
 
+    def pfClustersFromMultiCl(self, prefix="pfclusterFromMultiCl"):
+        """Returns PFClusters object."""
+        return PFClusters(self._tree, prefix)
+
     def caloParticles(self, prefix="calopart"):
         """Returns CaloParticles object."""
         return CaloParticles(self._tree, prefix)
@@ -233,6 +237,9 @@ class Event(object):
         """Returns Tracks object."""
         return Tracks(self._tree, prefix)
 
+    def electrons(self, prefix="ecalDrivenGsfele"):
+        """Returns Electrons object."""
+        return Electrons(self._tree, prefix)
 
 ##########
 class PrimaryVertex(object):
@@ -289,7 +296,6 @@ class RecHits(_Collection):
         """
         super(RecHits, self).__init__(tree, prefix + "_pt", RecHit, prefix)
 
-
 ##########
 class GenParticle(_Object):
     """Class representing a GenParticle."""
@@ -319,7 +325,7 @@ class GenParticle(_Object):
     #     The generator returns TrackMatchInfo objects.
     #     """
     #     self._checkIsValid()
-    #     for imatch in xrange(self._nMatchedTracks()):
+    #     for imatch in range(self._nMatchedTracks()):
     #         yield TrackMatchInfo(self._tree, self._index, imatch, self._prefix)
 
     # def simHits(self):
@@ -456,6 +462,44 @@ class PFClusters(_Collection):
 
 
 ##########
+class PFClusterFromMultiCl(_Object):
+    """Class representing a PFClusterFromMultiCl. """
+
+    def __init__(self, tree, index, prefix):
+        """Constructor.
+
+        Arguments:
+        tree    -- TTree object
+        index   -- Index of the PFCluster
+        prefix -- TBranch prefix
+        """
+        super(PFClusterFromMultiCl, self).__init__(tree, index, prefix)
+
+    def hits(self):
+        """Loop over all RecHits associated to the PFCluster and yield them"""
+        for rechitIdx in self.rechits():
+            yield RecHit(self._tree, rechitIdx, prefix="rechit")
+
+    def __repr__(self):
+        return "PFClusterFromMultiCl position: ({x}, {y}, {z}) eta: {eta}, phi: {phi}, energy: {energy}".format(
+                        x=self.pos().x(), y=self.pos().y(), z=self.pos().z(),
+                        eta=self.eta(), phi=self.phi(),
+                        energy=self.energy())
+
+class PFClustersFromMultiCl(_Collection):
+    """Class presenting a colletion of  PFClusterFromMultiCl. """
+
+    def __init__(self, tree, prefix):
+        """Constructor.
+
+        Arguments:
+        tree -- TTree object
+        prefix -- TBranch prefix
+        """
+        super(PFClustersFromMultiCl, self).__init__(tree, prefix + "_pt", PFClusterFromMultiCl, prefix)
+
+
+##########
 class SimCluster(_Object):
     """Class representing a SimCluster."""
 
@@ -509,3 +553,35 @@ class CaloParticles(_Collection):
         prefix -- TBranch prefix
         """
         super(CaloParticles, self).__init__(tree, prefix + "_pt", CaloParticle, prefix)
+
+##########
+class Electron(_Object):
+        """Class representing an Electron. """
+
+        def __init__(self, tree, index, prefix):
+                """Constructor.
+
+                Arguments:
+                tree    -- TTree object
+                index   -- Index of the Electron
+                prefix  -- TBranch prefix
+                """
+                super(Electron, self).__init__(tree, index, prefix)
+
+        def clustersFromMultiCl(self):
+            """Loop over all PFClusters associated to the SC and yield them"""
+            for pfclusterIdx in self.pfClusterIndex():
+                yield PFClusterFromMultiCl(self._tree, pfclusterIdx, prefix="pfclusterFromMultiCl")
+
+class Electrons(_Collection):
+        """Class representing a collection of Electrons. """
+
+        def __init__(self, tree, prefix):
+                """Constructor.
+
+                Arguments:
+                tree   -- TTree object
+                prefix -- TBranch prefix
+                """
+                super(Electrons, self).__init__(tree, prefix + "_pt", Electron, prefix)
+
