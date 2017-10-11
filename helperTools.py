@@ -75,6 +75,17 @@ def getHisto(values, hname = "hist", htitle = "hist"):
     ROOT.SetOwnership(hist,0)
     return hist
 
+def make1DHist(values, hname = "hist", htitle = "htitle", nbins = None, xmin = None, xmax = None):
+
+    if nbins == None: return getHisto(values, hname, htitile)
+
+    hist = ROOT.TH1F(hname,htitle,nbins,xmin,xmax)
+    for val in values: hist.Fill(val)
+
+    ROOT.SetOwnership(hist,0)
+    return hist
+
+
 def compDeltaVar(items, var = "x", prop = "std"):
 
     values = [getattr(item,var)() for item in items]
