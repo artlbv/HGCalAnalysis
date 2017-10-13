@@ -9,7 +9,7 @@ from helperTools import *
 
 #ROOT.gROOT.SetBatch(1)
 
-max_events = 100
+max_events = 1000
 
 z_half = +1
 minE = .5
@@ -134,6 +134,12 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             z_positions = sorted(set([abs(int(rh.z()*10)/10.) for rh in rechits]))
 
             '''
+            if len(z_positions) > 27:
+                for lay,z in enumerate(z_positions):
+                    print lay+1, z
+            '''
+
+            '''
             print "first and last z:" , rechits[rh_ind_sort_z[0]].z(), rechits[rh_ind_sort_z[-1]].z()
             print "z positions", z_positions
             '''
@@ -189,6 +195,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             first_z = abs(rechits[rh_ind_sort_z[0]].z())
             ## plot cumulative 50% :
             z_cumul50 = -1
+            z_cumul10 = -1
 
             # add points to plot
             for lay,ene in enumerate(lay_energies):
@@ -211,8 +218,10 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 addDataPoint(hist_data,"ene_cumul_z",(z_pos,cumul))
 
                 if z_cumul50 == -1 and cumul > 0.5: z_cumul50 = z_pos
+                if z_cumul10 == -1 and cumul > 0.1: z_cumul10 = z_pos
 
             addDataPoint(hist_data,"z_cumul50",z_cumul50)
+            addDataPoint(hist_data,"z_cumul10",z_cumul10)
 
     print("Found %i gen particles and %i multicl" %(tot_genpart,tot_multiclus))
 
