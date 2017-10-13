@@ -7,7 +7,7 @@ from helperTools import *
 # The purpose of this file is to demonstrate mainly the objects
 # that are in the HGCalNtuple
 
-max_events = 1000
+max_events = 10000
 
 z_half = +1
 minE = .5
@@ -85,6 +85,9 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         for i_ele, ele in enumerate(electrons):
 
             if ele.isEB(): continue
+            if ele.ele_siguu() == -1:
+                #print("Problem!")
+                continue
 
             ## select SCs with 1 cluster (seed=electron)
             #if ele.numClinSC() != 1: continue
@@ -106,28 +109,30 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             seedpt = ele.seedenergy() * ele.pt()/ele.energy()
             seed_tlv.SetPtEtaPhiE(seedpt, ele.seedeta(), ele.seedphi(), ele.energy())
 
+            found_match = False
+
             for part in good_genparts:
+                if "qcd" in fname: break
+                if "pi" in fname: break
 
                 part_tlv = ROOT.TLorentzVector()
                 part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
 
-                if "qcd" not in fname:
-                    if ele.eta() * part.eta() < 0: continue
+                if ele.eta() * part.eta() < 0: continue
 
                 dR = part_tlv.DeltaR(ele_tlv)
                 addDataPoint(hist_data,"part_ele_dR",dR)
 
-                if "qcd" not in fname:
-                    if dR > 0.01: continue
-                #else:
-                #    if dR < 0.05: continue
-
-                if ele.ele_siguu() == -1:
-                    #print("Problem!")
-                    continue
+                if dR > 0.01: continue
 
                 dR = part_tlv.DeltaR(seed_tlv)
                 addDataPoint(hist_data,"part_seed_dR",dR)
+
+
+            if "qcd" in fname: found_match = True
+            if "pi" in fname: found_match = True
+
+            if found_match:
 
                 tot_ele += 1
 
@@ -143,19 +148,6 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
                 if ele.fbrem() > 0 and ele.fbrem() < 1:
                     addDataPoint(hist_data,"ele_sigvv_vs_fbrem",(ele.fbrem(),ele.ele_sigvv()))
-
-                '''
-                theta = 2*math.atan(math.exp(-abs(ele.eta())))
-                #print theta
-                posZcorr = abs(ele.ele_pcaPosZ()) / math.cos(theta)
-
-                addDataPoint(hist_data,"ele_posZ",abs(ele.ele_pcaPosZ()))
-                addDataPoint(hist_data,"ele_posZcorr",posZcorr)
-                addDataPoint(hist_data,"cosTheta",1/math.cos(theta))
-                addDataPoint(hist_data,"posZ_vs_cosEta",(abs(ele.ele_pcaPosZ()),1/math.cos(theta)))
-                addDataPoint(hist_data,"posZ_vs_eta",(abs(ele.ele_pcaPosZ()),abs(ele.eta())))
-                continue
-                '''
 
                 addDataPoint(hist_data,"ele_varZ",ele.ele_pcaEigSig3())
                 addDataPoint(hist_data,"ele_pcaSig1",ele.ele_pcaEigSig1())
@@ -185,13 +177,6 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
                 if "qcd" in fname: break
 
-            '''
-            if n_matched_ele > 1:
-                print("Matched %i gsfEle to genpart" % n_matched_ele)
-            elif n_matched_ele == 0:
-                print("No gsfEle matched to genpart")
-            '''
-
     print("Found %i gen particles and %i ele and %i multicl" %(tot_genpart,tot_ele, tot_multiclus))
 
     #Set nbins,xmin,xmax
@@ -201,18 +186,18 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ranges["ele_siguu"] = 100,0.5,1.5
     ranges["ele_sigvv"] = 100,0.5,1.5
     ranges["ele_NLay"] = 50,0,50
-    ranges["ele_firstLay"] = 20,0,20
-    ranges["ele_lastLay"] = 50,0,50
+    ranges["ele_firstLay"] = 25,1,26
+    ranges["ele_lastLay"] = 52,1,53
     ranges["ele_posZ"] = 30,320,350
     ranges["ele_varZ"] = 100,0,10
 
-    ranges["ele_pcaEig1"] = 200,0.9,1
-    ranges["ele_pcaEig2"] = 200,0,0.2
-    ranges["ele_pcaEig3"] = 200,0,0.2
+    ranges["ele_pcaEig1"] = 50,0.9,1
+    ranges["ele_pcaEig2"] = 50,0,0.2
+    ranges["ele_pcaEig3"] = 50,0,0.2
 
-    ranges["ele_pcaSig1"] = 100,0,2
-    ranges["ele_pcaSig2"] = 100,0,2
-    ranges["ele_pcaSig3"] = 100,2,10
+    ranges["ele_pcaSig1"] = 100,0,3
+    ranges["ele_pcaSig2"] = 100,0,3
+    ranges["ele_pcaSig3"] = 100,0,10
 
     ranges["ele_EE4overE"] = 100,0,0.4
     ranges["ele_FHoverE"] = 100,0,0.05
@@ -224,8 +209,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
     ranges["ele_numCl"] = 20,0,20
 
-    ranges["ele_layEfrac10"] = 30,0,30
-    ranges["ele_layEfrac90"] = 30,0,30
+    ranges["ele_layEfrac10"] = 30,1,31
+    ranges["ele_layEfrac90"] = 50,1,51
 
     ranges["ele_depthCompat"] = 100,-10,10
     ranges["ele_realDepth"] = 100,0,20
