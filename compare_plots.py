@@ -3,16 +3,29 @@ import os, sys
 import ROOT
 import phase2tdrStyle
 
+def addOverflow(hist):
+
+    #for ibin in range(1,hist.GetNbinsX()+1):
+    nbins = hist.GetNbinsX()
+
+    hist.SetBinContent(nbins,hist.GetBinContent(nbins) + hist.GetBinContent(nbins+1))
+    hist.SetBinContent(1,hist.GetBinContent(1) + hist.GetBinContent(0))
+
 
 indir = "/home/llr/cms/lobanov/HGCAL/reco/clustering/flat_ntuple/CMSSW_9_3_2/src/RecoNtuples/HGCalAnalysis/test/ntuples/"
 
 samples = {}
-samples["1_sig"] = ("eleIDntuple_ele15_ele.root", "Ele, 15 GeV, no PU",ROOT.kRed+2)
-samples["2_sig"] = ("hgcalNtuple_ele15_932_PU140_n1000_helper_ele.root", "Ele, 15 GeV, PU140",ROOT.kMagenta+2)
-samples["3_bkg"] = ("eleIDntuple_qcd_n1000_ele.root", "QCD",ROOT.kCyan+2)
-samples["4_bkg"] = ("eleIDntuple_pi25_n1000_ele.root", "Pi, 25 GeV, no PU",ROOT.kYellow+2)
 
-histos = {samp:[] for samp in samples}
+'''
+#samples["1_sig"] = ("eleIDntuple_ele15_noPU_n10000_ele.root", "Ele, 15 GeV, no PU",ROOT.kRed+2)
+samples["1_sig"] = ("eleIDntuple_ele15_ele.root", "Ele, 15 GeV, no PU",ROOT.kRed+2)
+samples["2_sig"] = ("eleIDntuple_ele15_PU140_n1000_ele.root", "Ele, 15 GeV, PU140",ROOT.kMagenta+2)
+samples["3_bkg"] = ("eleIDntuple_qcd_n1000_ele.root", "QCD",ROOT.kCyan+2)
+samples["4_bkg"] = ("eleIDntuple_pi25_n1000_test_ele.root", "Pi, 25 GeV, no PU",ROOT.kYellow+2)
+'''
+samples["1_sig"] = ("eleIDntuple_ele15_noPU_n1000_ele.root", "Ele, 15 GeV, Multicl",ROOT.kRed+2)
+samples["2_sig"] = ("eleIDntuple_ele15_noPU_n1000_SIMCL_ele.root", "Ele, 15 GeV, SIMCL",ROOT.kCyan+2)
+
 hists = {}
 
 for sample in sorted(samples):
@@ -35,11 +48,13 @@ for sample in sorted(samples):
         hist.SetTitle(title)
         hist.GetXaxis().SetTitle(obj.GetName().replace("ele_",""))
 
+        hist.SetLineWidth(2)
         hist.SetLineColor(color)
-        hist.SetFillColorAlpha(color,0.4)
+        hist.SetFillColorAlpha(color,0.5)
         hist.SetMarkerColor(color)
 
-        histos[sample].append(hist)
+        ## add overflow bins
+        #addOverflow(hist)
 
         if obj.GetName() in hists:
             hists[obj.GetName()].append(hist)
@@ -49,7 +64,9 @@ for sample in sorted(samples):
     tfile.Close()
 
 #outdir = "/eos/user/a/alobanov/www/HGCAL/reco/eleID/compare_ele_ID_vars/"
-outdir = "compare_vars/"
+#outdir = "compare_vars_wOverflow/"
+#outdir = "compare_vars/"
+outdir = "compare_vars_simcl/"
 
 if not os.path.exists(outdir): os.makedirs(outdir)
 
