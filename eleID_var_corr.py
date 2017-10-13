@@ -214,7 +214,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ranges["ele_predDepthSigma"] = 100,0.85,1.2
     '''
 
-    data_matrix = np.array([hist_data[data_name] for data_name in hist_data])
+    data_matrix = np.array([hist_data[data_name] for data_name in sorted(hist_data.keys())])
     corr_matr = np.corrcoef(data_matrix)
 
     #print data_matrix
@@ -223,13 +223,15 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     corr_data = {}
 
     nvars = len(hist_data.keys())
+
+    canv = ROOT.TCanvas("canv_corr","",1200,1000)
     h_corr = ROOT.TH2F("h_corr","correlation",nvars,0,nvars,nvars,0,nvars)
 
-    for i1,var1 in enumerate(hist_data.keys()):
+    for i1,var1 in enumerate(sorted(hist_data.keys())):
         h_corr.GetXaxis().SetBinLabel(i1+1,var1.replace("ele_",""))
         h_corr.GetYaxis().SetBinLabel(i1+1,var1.replace("ele_",""))
 
-        for i2,var2 in enumerate(hist_data.keys()):
+        for i2,var2 in enumerate(sorted(hist_data.keys())):
             corr = abs(corr_matr[i1][i2])
             if var1 != var2:
                 h_corr.SetBinContent(i1+1,i2+1,corr)
