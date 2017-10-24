@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+import os,sys
 import ROOT, math
 import numpy as np
 from NtupleDataFormat import HGCalNtuple
@@ -7,7 +7,7 @@ from helperTools import *
 # The purpose of this file is to demonstrate mainly the objects
 # that are in the HGCalNtuple
 
-max_events = 10000
+max_events = 1000
 
 z_half = +1
 minE = .5
@@ -19,11 +19,25 @@ max_fbrem = 10.3
 #max_dR = 0.3
 max_dR = 0.3
 
+mydir = "/grid_mnt/data__data.polcms/cms/lobanov/hgcal/clustering/tuples/myplots/"
+
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
 
     foutname = fname.replace(".root","_ele.root")
+
+    if "lobanov" not in foutname:
+        print "Saving in another file",
+        foutname = mydir + os.path.basename(foutname)
+        print foutname
+
     tfile = ROOT.TFile(foutname,"recreate")
+
+    ## sample type flag
+    is_signal = True
+    if "qcd" in fname.lower(): is_signal = False
+    if "pi" in fname.lower(): is_signal = False
+
 
     tot_nevents = 0
     tot_genpart = 0
@@ -111,32 +125,39 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             found_match = False
 
-            for part in good_genparts:
-                if "qcd" in fname: break
-                if "pi" in fname: break
+            if is_signal:
+                for part in good_genparts:
 
-                part_tlv = ROOT.TLorentzVector()
-                part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
+                    part_tlv = ROOT.TLorentzVector()
+                    part_tlv.SetPtEtaPhiE(part.pt(), part.eta(), part.phi(), part.energy())
 
-                if ele.eta() * part.eta() < 0: continue
+                    if ele.eta() * part.eta() < 0: continue
 
-                dR = part_tlv.DeltaR(ele_tlv)
-                addDataPoint(hist_data,"part_ele_dR",dR)
+                    dR = part_tlv.DeltaR(ele_tlv)
+                    addDataPoint(hist_data,"part_ele_dR",dR)
 
-                if dR > 0.01: continue
+                    if dR > 0.01: continue
 
-                dR = part_tlv.DeltaR(seed_tlv)
-                addDataPoint(hist_data,"part_seed_dR",dR)
+                    dR = part_tlv.DeltaR(seed_tlv)
+                    addDataPoint(hist_data,"part_seed_dR",dR)
 
+                    found_match = True
 
-            if "qcd" in fname: found_match = True
-            if "pi" in fname: found_match = True
+            '''
+            if not is_signal
+            if "qcd" in fname.lower(): found_match = True
+            if "pi" in fname.lower(): found_match = True
+            '''
 
-            if found_match:
+            if found_match and is_signal:
 
                 tot_ele += 1
 
                 if ele.ele_realDepth() > 500: continue
+
+                if hasattr(ele,"energyEE"):
+                    addDataPoint(hist_data,"ele_energy",ele.energyEE())
+                    addDataPoint(hist_data,"ele_ET",ele.energyEE()/math.cosh(ele.eta()))
 
                 addDataPoint(hist_data,"ele_siguu",ele.ele_siguu())
                 addDataPoint(hist_data,"ele_sigvv",ele.ele_sigvv())
@@ -159,6 +180,10 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
                 addDataPoint(hist_data,"ele_layEfrac10",ele.ele_layEfrac10())
                 addDataPoint(hist_data,"ele_layEfrac90",ele.ele_layEfrac90())
+                addDataPoint(hist_data,"ele_layEfrac10_wrt1",ele.ele_layEfrac10() - ele.ele_firstlay())
+                addDataPoint(hist_data,"ele_layEfrac90_wrt1",ele.ele_layEfrac90() - ele.ele_firstlay())
+                addDataPoint(hist_data,"ele_outEnergyFrac",ele.ele_outEnergy()/ele.seedenergy())
+                #addDataPoint(hist_data,"ele_outEnergyFrac",ele.ele_outEnergy()/ele.energyEE())
 
                 addDataPoint(hist_data,"ele_depthCompat",ele.ele_depthCompat())
                 addDataPoint(hist_data,"ele_realDepth",ele.ele_realDepth())
@@ -175,13 +200,13 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 addDataPoint(hist_data,"ele_dEtaEle",ele.deltaEtaEleClusterTrackAtCalo())
                 addDataPoint(hist_data,"ele_dPhiEle",ele.deltaPhiEleClusterTrackAtCalo())
 
-                if "qcd" in fname: break
+                #if "qcd" in fname.lower(): break
 
     print("Found %i gen particles and %i ele and %i multicl" %(tot_genpart,tot_ele, tot_multiclus))
 
     #Set nbins,xmin,xmax
     ranges = {}
-    ranges["part_ele_dR"] = 100,0,0.05
+    ranges["part_ele_dR"] = 100,0,0.5
     ranges["part_seed_dR"] = 100,0,0.2
     ranges["ele_siguu"] = 100,0.5,1.5
     ranges["ele_sigvv"] = 100,0.5,1.5
