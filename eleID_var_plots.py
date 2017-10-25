@@ -19,12 +19,13 @@ max_fbrem = 10.3
 #max_dR = 0.3
 max_dR = 0.3
 
-mydir = "/grid_mnt/data__data.polcms/cms/lobanov/hgcal/clustering/tuples/myplots/"
+#mydir = "/grid_mnt/data__data.polcms/cms/lobanov/hgcal/clustering/tuples/myplots/"
+mydir = "/eos/user/a/alobanov/www/HGCAL/reco/eleID/compare_ele_ID_vars/dRcomp/dRcuts/myplots/"
 
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
 
-    foutname = fname.replace(".root","_ele.root")
+    foutname = fname.replace(".root","_ele_wGen_dR.root")
 
     if "lobanov" not in foutname:
         print "Saving in another file",
@@ -38,6 +39,10 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     if "qcd" in fname.lower(): is_signal = False
     if "pi" in fname.lower(): is_signal = False
 
+    if is_signal:
+        print "# This sample is signal"
+    else:
+        print "# This sample is background"
 
     tot_nevents = 0
     tot_genpart = 0
@@ -53,9 +58,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
     hist_data = {}
 
-    # store rechits
-    good_cluster_rechits = {}
-    bad_cluster_rechits = {}
+    ## Gen particle collection prefix
+    gen_prefix = "gen"
 
     for event in ntuple:
         #if stop_run: break
@@ -66,26 +70,43 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         tot_nevents += 1
 
         #####
-        # Select good genparticles
-        genParts = event.genParticles()
-        #tot_genpart += len(genParts)
-
         good_genparts = []
-        for i_part, part in enumerate(genParts):
+        # Select good genparticles
+        #genParts = event.genParticles()
+        if is_signal:
+            genParts = event.genParticles(gen_prefix)
+            #tot_genpart += len(genParts)
+            #print "Contains %i genparts" % len(genParts)
 
-            #if i_part > 10: continue
+            for i_part, part in enumerate(genParts):
+                if not is_signal: break
 
-            if part.gen() < 1: continue
-            if part.reachedEE() < 2: continue
-            #if part.fbrem() > max_fbrem: continue
-            #if abs(part.pid()) != 11: continue
+                if abs(part.eta()) < 1.5: continue
+                if abs(part.eta()) > 2.9: continue
+                #if i_part > 10: continue
+                #print part.status()
 
-            good_genparts.append(part)
+                if gen_prefix == "genpart":
+                    if part.gen() < 1: continue
+                    if part.reachedEE() < 2: continue
+                elif gen_prefix == "gen":
+                    #if part.status() != 23 and part.status() != 1: continue
+                    #if part.status() != 23: continue
+                    if part.status() != 1: continue
+                    if abs(part.pdgid()) != 11: continue
 
-        #print("Event %i" % event.event())
-        #print("Found %i good gen particles" %len(good_genparts))
-        tot_genpart += len(good_genparts)
+                #if part.fbrem() > max_fbrem: continue
+                #if abs(part.pid()) != 11: continue
 
+                good_genparts.append(part)
+
+                if len(good_genparts) > 1: break
+
+            #print("Event %i" % event.event())
+            #print("Found %i good gen particles" %len(good_genparts))
+            tot_genpart += len(good_genparts)
+
+        if is_signal and tot_genpart == 0: continue
         #####
         # Select good electrons
 
@@ -102,6 +123,12 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             if ele.ele_siguu() == -1:
                 #print("Problem!")
                 continue
+
+            if ele.pt() < 5: continue
+
+            if hasattr(ele,"energyEE"):
+                et = ele.energyEE()/math.cosh(ele.eta())
+                #if et < 5: continue
 
             ## select SCs with 1 cluster (seed=electron)
             #if ele.numClinSC() != 1: continue
@@ -125,6 +152,11 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             found_match = False
 
+            if hasattr(ele,"energyEE"):
+                et = ele.energyEE()/math.cosh(ele.eta())
+            else:
+                et = 0
+
             if is_signal:
                 for part in good_genparts:
 
@@ -136,28 +168,57 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                     dR = part_tlv.DeltaR(ele_tlv)
                     addDataPoint(hist_data,"part_ele_dR",dR)
 
-                    if dR > 0.01: continue
+                    dEta = part_tlv.Eta() - ele_tlv.Eta()
+                    dPhi = part_tlv.DeltaPhi(ele_tlv)
 
-                    dR = part_tlv.DeltaR(seed_tlv)
-                    addDataPoint(hist_data,"part_seed_dR",dR)
+                    dRs = part_tlv.DeltaR(seed_tlv)
+                    addDataPoint(hist_data,"part_seed_dR",dRs)
 
-                    found_match = True
+                    if dR < 0.2:
+                        if ele.fbrem() > 0:
+                            addDataPoint(hist_data,"part_ele_dR_vs_fbrem",(ele.fbrem(),dR))
 
-            '''
-            if not is_signal
-            if "qcd" in fname.lower(): found_match = True
-            if "pi" in fname.lower(): found_match = True
-            '''
+                        addDataPoint(hist_data,"part_ele_dR_vs_eta",(abs(ele.eta()),dR))
 
-            if found_match and is_signal:
+                        addDataPoint(hist_data,"part_ele_dEta_vs_eta",(abs(ele.eta()),dEta))
+                        addDataPoint(hist_data,"part_ele_dPhi_vs_eta",(abs(ele.eta()),dPhi))
+
+                        addDataPoint(hist_data,"part_ele_dR_vs_pt",(ele.pt(),dR))
+                        addDataPoint(hist_data,"part_ele_dR_vs_ET",(et,dR))
+                        addDataPoint(hist_data,"part_ele_dR_vs_dRs",(dRs,dR))
+                        addDataPoint(hist_data,"part_ele_dR_vs_numCl",(ele.numClinSC(),dR))
+                        addDataPoint(hist_data,"part_ele_dRs_vs_numCl",(ele.numClinSC(),dRs))
+
+                    #if dR > 0.01: continue
+                    #if dRs > 0.1: continue
+                    #if dR > 0.2 - dRs: continue
+                    #if dR > 0.1 - dRs: continue
+                    #is_match = False
+                    if (dR < 0.15 and dRs < 0.1): found_match = True
+                    #if dR < 0.01: found_match = True
+
+                    if found_match == True: break
+                    #found_match = True
+            else:
+                found_match = True
+
+            if found_match:
 
                 tot_ele += 1
 
                 if ele.ele_realDepth() > 500: continue
 
+                addDataPoint(hist_data,"ele_seedET_vs_PT",(ele.pt(),ele.seedenergy()/math.cosh(ele.eta())))
+                addDataPoint(hist_data,"part_ele_PT",(part.pt(),ele.pt()))
+
                 if hasattr(ele,"energyEE"):
                     addDataPoint(hist_data,"ele_energy",ele.energyEE())
-                    addDataPoint(hist_data,"ele_ET",ele.energyEE()/math.cosh(ele.eta()))
+                    addDataPoint(hist_data,"ele_ET",et)
+                    addDataPoint(hist_data,"ele_ET_vs_PT",(ele.pt(),et))
+
+                    addDataPoint(hist_data,"part_PT_vs_ele_ET",(part.pt(),et))
+                    if ele.energyEE() < 100:
+                        addDataPoint(hist_data,"part_PT_vs_ele_EE",(part.pt(),ele.energyEE()))
 
                 addDataPoint(hist_data,"ele_siguu",ele.ele_siguu())
                 addDataPoint(hist_data,"ele_sigvv",ele.ele_sigvv())
@@ -182,7 +243,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 addDataPoint(hist_data,"ele_layEfrac90",ele.ele_layEfrac90())
                 addDataPoint(hist_data,"ele_layEfrac10_wrt1",ele.ele_layEfrac10() - ele.ele_firstlay())
                 addDataPoint(hist_data,"ele_layEfrac90_wrt1",ele.ele_layEfrac90() - ele.ele_firstlay())
-                addDataPoint(hist_data,"ele_outEnergyFrac",ele.ele_outEnergy()/ele.seedenergy())
+                #addDataPoint(hist_data,"ele_outEnergyFrac",ele.ele_outEnergy()/ele.seedenergy())
                 #addDataPoint(hist_data,"ele_outEnergyFrac",ele.ele_outEnergy()/ele.energyEE())
 
                 addDataPoint(hist_data,"ele_depthCompat",ele.ele_depthCompat())
@@ -207,7 +268,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     #Set nbins,xmin,xmax
     ranges = {}
     ranges["part_ele_dR"] = 100,0,0.5
-    ranges["part_seed_dR"] = 100,0,0.2
+    ranges["part_seed_dR"] = 100,0,0.5
     ranges["ele_siguu"] = 100,0.5,1.5
     ranges["ele_sigvv"] = 100,0.5,1.5
     ranges["ele_NLay"] = 50,0,50
@@ -259,7 +320,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         #hists.append(hist)
         ROOT.SetOwnership(canv,0)
 
-        canv.Write()
+        #canv.Write()
         hist.Write()
     q = raw_input("exit")
 
