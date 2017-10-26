@@ -129,6 +129,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             if hasattr(ele,"energyEE"):
                 et = ele.energyEE()/math.cosh(ele.eta())
                 #if et < 5: continue
+            if ele.seedenergy() < 10: continue
 
             ## select SCs with 1 cluster (seed=electron)
             #if ele.numClinSC() != 1: continue
@@ -209,16 +210,19 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 if ele.ele_realDepth() > 500: continue
 
                 addDataPoint(hist_data,"ele_seedET_vs_PT",(ele.pt(),ele.seedenergy()/math.cosh(ele.eta())))
-                addDataPoint(hist_data,"part_ele_PT",(part.pt(),ele.pt()))
-
                 if hasattr(ele,"energyEE"):
                     addDataPoint(hist_data,"ele_energy",ele.energyEE())
-                    addDataPoint(hist_data,"ele_ET",et)
-                    addDataPoint(hist_data,"ele_ET_vs_PT",(ele.pt(),et))
 
-                    addDataPoint(hist_data,"part_PT_vs_ele_ET",(part.pt(),et))
-                    if ele.energyEE() < 100:
-                        addDataPoint(hist_data,"part_PT_vs_ele_EE",(part.pt(),ele.energyEE()))
+                if is_signal:
+                    addDataPoint(hist_data,"part_ele_PT",(part.pt(),ele.pt()))
+
+                    if hasattr(ele,"energyEE"):
+                        addDataPoint(hist_data,"ele_ET",et)
+                        addDataPoint(hist_data,"ele_ET_vs_PT",(ele.pt(),et))
+
+                        addDataPoint(hist_data,"part_PT_vs_ele_ET",(part.pt(),et))
+                        if ele.energyEE() < 100:
+                            addDataPoint(hist_data,"part_PT_vs_ele_EE",(part.pt(),ele.energyEE()))
 
                 addDataPoint(hist_data,"ele_siguu",ele.ele_siguu())
                 addDataPoint(hist_data,"ele_sigvv",ele.ele_sigvv())
