@@ -19,13 +19,14 @@ max_fbrem = 10.3
 #max_dR = 0.3
 max_dR = 0.3
 
-#mydir = "/grid_mnt/data__data.polcms/cms/lobanov/hgcal/clustering/tuples/myplots/"
+#mydir = "/grid_mnt/data__data.polcms/cms/lobanov/hgcal/clustering/tuples/myplots_v2/"
+#mydir = "/eos/user/a/alobanov/www/HGCAL/reco/eleID/ele_ID_vars/plots_v2/"
 mydir = "/eos/user/a/alobanov/www/HGCAL/reco/eleID/compare_ele_ID_vars/dRcomp/dRcuts/myplots/"
 
 def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     ntuple = HGCalNtuple(fname)
 
-    foutname = fname.replace(".root","_ele_ArbMatch.root")
+    foutname = fname.replace(".root","_ele_clean.root")
 
     if "lobanov" not in foutname:
         print "Saving in another file",
@@ -59,8 +60,8 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
     hist_data = {}
 
     ## Gen particle collection prefix
-    gen_prefix = "gen"
     #gen_prefix = "genpart"
+    gen_prefix = "gen"
 
     ele_cnt = 0
     gen_cnt = 0
@@ -91,16 +92,17 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 if abs(part.eta()) < 1.5: continue
                 if abs(part.eta()) > 2.9: continue
                 #if i_part > 10: continue
-                #print part.status()
                 #if part.pt() < 10: continue
+                #if part.pt() < 10: continue
+                #if part.pt() > 20: continue
 
                 if gen_prefix == "genpart":
                     if part.gen() < 1: continue
                     if part.reachedEE() < 2: continue
                 elif gen_prefix == "gen":
                     #if part.status() != 23 and part.status() != 1: continue
-                    #if part.status() != 23: continue
-                    if part.status() != 1: continue
+                    if part.status() != 23: continue
+                    #if part.status() != 1: continue
                     if abs(part.pdgid()) != 11: continue
 
                 #if part.fbrem() > max_fbrem: continue
@@ -128,17 +130,18 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
         for i_ele, ele in enumerate(electrons):
 
             if ele.isEB(): continue
-            if ele.ele_siguu() == -1:
-                #print("Problem!")
-                continue
+            if ele.ele_siguu() == -1: continue
+            if ele.fbrem() < -1: continue
 
-            if ele.pt() < 5: continue
+            #if ele.pt() < 5: continue
 
             if hasattr(ele,"energyEE"):
                 et = ele.energyEE()/math.cosh(ele.eta())
                 #if et < 5: continue
                 #if ele.energyEE() < 10: continue
-            #if ele.seedenergy() < 20: continue
+            #if ele.seedenergy() < 10: continue
+            else:
+                break
 
             ## select SCs with 1 cluster (seed=electron)
             #if ele.numClinSC() != 1: continue
@@ -171,6 +174,13 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
                     dR = part_tlv.DeltaR(ele_tlv)
                     addDataPoint(hist_data,"part_ele_dR",dR)
+                    if dR < 0.15:
+                        addDataPoint(hist_data,"part_ele_dR_vs_pT",(part.pt(),dR))
+                        if hasattr(ele,"energyEE"):
+                            if ele.energyEE() < 100:
+                                addDataPoint(hist_data,"part_ele_dR_vs_EE",(ele.energyEE(),dR))
+                                addDataPoint(hist_data,"part_ele_dR_vs_ET",(ele.energyEE()/math.cosh(ele.eta()),dR))
+
 
                     if dR > 0.1: continue
 
@@ -178,7 +188,6 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                     found_match = True
                     ele_match_ids[i_gen].append(i_ele)
                     matched_electrons.append(ele)
-
                 ## end ele loop
             ## end gen loop
             if not found_match: continue
@@ -189,6 +198,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
         # Arbitrate in case of multiple matches per gen particle / overlapping gsfElectons - remove duplicates
         clean_electrons = []
+        dupl_electrons = []
 
         for i1, ele1 in enumerate(matched_electrons):
             is_best = True
@@ -211,12 +221,15 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
                 #n_duplicates += 1
 
                 ## choose better ele
+                # first check energy
                 if hasattr(ele1,"energyEE") and hasattr(ele2,"energyEE"):
                     if ele1.energyEE() < ele2.energyEE():
                         is_best = False
                         #continue
                         break
-                #else: is_best = False
+                    elif ele1.energyEE() > ele2.energyEE():
+                        continue
+                # second, check E/Pout if energy is the same
                 if abs(ele1.eEleClusterOverPout() - 1) > abs(ele2.eEleClusterOverPout() - 1):
                     is_best = False
                     break
@@ -224,53 +237,29 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             if is_best:
                 #n_uniq_ele += 1
                 clean_electrons.append(ele1)
-                break
+            else:
+                dupl_electrons.append(ele1)
 
-        n_duplicates += len(matched_electrons) - len(clean_electrons)
+        n_duplicates += len(dupl_electrons)
         n_uniq_ele += len(clean_electrons)
 
-        if len(clean_electrons) > 2:
+        '''
+        #if len(clean_electrons) > 0:
+        #if len(matched_electrons) > 2 and len(clean_electrons):
+        if len(matched_electrons) > 2 and len(clean_electrons) < 2:
+
             #print clean_electrons
-            print
+            print "Matched"
+            for ele in matched_electrons:
+                #print ele.eta(), ele.phi(), ele.pt(), ele.seedenergy(), ele.energyEE(), ele.seedeta(), ele.seedphi()
+                print ele, ele.eta(), ele.phi(), ele.pt(), ele.seedenergy(), ele.seedeta(), ele.eEleClusterOverPout(), ele.seedphi(), ele.energyEE()
+
+            print "Clean"
             for ele in clean_electrons:
                 #print ele.eta(), ele.phi(), ele.pt(), ele.seedenergy(), ele.energyEE(), ele.seedeta(), ele.seedphi()
-                print ele.eta(), ele.phi(), ele.pt(), ele.seedenergy(), ele.seedeta(), ele.seedphi()
+                print ele, ele.eta(), ele.phi(), ele.pt(), ele.seedenergy(), ele.seedeta(), ele.eEleClusterOverPout(), ele.seedphi(), ele.energyEE()
 
         '''
-        clean_electrons = []
-        if is_signal:
-            for gen in ele_match_ids:
-                n_match = len(ele_match_ids[gen])
-                gen_cnt += 1
-                ele_cnt += n_match
-
-                addDataPoint(hist_data,"gen_nmatch_ele",n_match)
-
-                if n_match == 1:
-                    # clean_electrons.append(good_electrons[ele_match_ids[gen][0]))
-                    continue
-
-                ele_idxs = ele_match_ids[i_gen]
-
-                if len(ele_idxs) < 2: continue
-
-                # Arbitrate in case of multiple matches per gen particle
-                best_dEoP = -1
-                best_idx = ele_idxs[0]
-
-                for i_ele in ele_idxs:
-
-                    if i_ele == best_idx: continue
-
-                    # previous best ele
-                    ele1 = good_electrons[best_idx]
-                    # previous best ele
-                    ele2 = good_electrons[i_ele]
-
-
-
-        else:
-            clean_electrons = good_electrons
 
         for ele in clean_electrons:
 
@@ -278,25 +267,26 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             if ele.ele_realDepth() > 500: continue
 
-            et = ele.seedenergy()/math.cosh(ele.eta()
-
             addDataPoint(hist_data,"ele_seedET_vs_PT",(ele.pt(),ele.seedenergy()/math.cosh(ele.eta())))
+
             if hasattr(ele,"energyEE"):
+                et = ele.energyEE()/math.cosh(ele.eta())
+
                 addDataPoint(hist_data,"ele_energy",ele.energyEE())
                 addDataPoint(hist_data,"ele_ET",et)
                 addDataPoint(hist_data,"ele_seedenergy_vs_eneEE",(ele.seedenergy(),ele.energyEE()))
+                addDataPoint(hist_data,"ele_ET_vs_PT",(ele.pt(),et))
 
+            '''
             if is_signal:
                 addDataPoint(hist_data,"part_ele_PT",(part.pt(),ele.pt()))
 
                 if hasattr(ele,"energyEE"):
-                    addDataPoint(hist_data,"ele_ET",et)
-                    addDataPoint(hist_data,"ele_ET_vs_PT",(ele.pt(),et))
 
                     addDataPoint(hist_data,"part_PT_vs_ele_ET",(part.pt(),et))
                     if ele.energyEE() < 100:
                         addDataPoint(hist_data,"part_PT_vs_ele_EE",(part.pt(),ele.energyEE()))
-
+            '''
             addDataPoint(hist_data,"ele_siguu",ele.ele_siguu())
             addDataPoint(hist_data,"ele_sigvv",ele.ele_sigvv())
             addDataPoint(hist_data,"ele_NLay",ele.ele_nlay())
@@ -305,8 +295,21 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             addDataPoint(hist_data,"ele_posZ",abs(ele.ele_pcaPosZ()))
 
-            if ele.fbrem() > 0 and ele.fbrem() < 1:
+            addDataPoint(hist_data,"ele_fbrem",ele.fbrem())
+            if ele.fbrem() > -0.5 and ele.fbrem() < 1:
                 addDataPoint(hist_data,"ele_sigvv_vs_fbrem",(ele.fbrem(),ele.ele_sigvv()))
+                addDataPoint(hist_data,"ele_NLay_vs_fbrem",(ele.fbrem(),ele.ele_nlay()))
+
+                if hasattr(ele,"energyEE"):
+                    if ele.energyEE() < 2* ele.energy():
+                        addDataPoint(hist_data,"ele_EE_vs_fbrem",(ele.fbrem(),ele.energyEE()))
+                        addDataPoint(hist_data,"ele_EEfrac_vs_fbrem",(ele.fbrem(),ele.energyEE()/ele.energy()))
+                        addDataPoint(hist_data,"ele_EET_vs_fbrem",(ele.fbrem(),ele.energyEE()/math.cosh(ele.eta())))
+                if hasattr(ele,"eleenergy"):
+                    if ele.eleenergy() < 2* ele.energy():
+                        addDataPoint(hist_data,"ele_E_vs_fbrem",(ele.fbrem(),ele.eleenergy()))
+                        addDataPoint(hist_data,"ele_Efrac_vs_fbrem",(ele.fbrem(),ele.eleenergy()/ele.energy()))
+                        addDataPoint(hist_data,"ele_ET_vs_fbrem",(ele.fbrem(),ele.eleenergy()/math.cosh(ele.eta())))
 
             addDataPoint(hist_data,"ele_varZ",ele.ele_pcaEigSig3())
             addDataPoint(hist_data,"ele_pcaSig1",ele.ele_pcaEigSig1())
@@ -340,9 +343,82 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
             #if "qcd" in fname.lower(): break
 
+        for ele in dupl_electrons:
+
+            tot_ele += 1
+
+            if ele.ele_realDepth() > 500: continue
+
+            addDataPoint(hist_data,"dupl_ele_seedET_vs_PT",(ele.pt(),ele.seedenergy()/math.cosh(ele.eta())))
+
+            if hasattr(ele,"energyEE"):
+                et = ele.energyEE()/math.cosh(ele.eta())
+
+                addDataPoint(hist_data,"dupl_ele_energy",ele.energyEE())
+                addDataPoint(hist_data,"dupl_ele_ET",et)
+                addDataPoint(hist_data,"dupl_ele_seedenergy_vs_eneEE",(ele.seedenergy(),ele.energyEE()))
+                addDataPoint(hist_data,"dupl_ele_ET_vs_PT",(ele.pt(),et))
+
+            '''
+            if is_signal:
+                addDataPoint(hist_data,"dupl_part_ele_PT",(part.pt(),ele.pt()))
+
+                if hasattr(ele,"energyEE"):
+
+                    addDataPoint(hist_data,"dupl_part_PT_vs_ele_ET",(part.pt(),et))
+                    if ele.energyEE() < 100:
+                        addDataPoint(hist_data,"dupl_part_PT_vs_ele_EE",(part.pt(),ele.energyEE()))
+            '''
+            addDataPoint(hist_data,"dupl_ele_siguu",ele.ele_siguu())
+            addDataPoint(hist_data,"dupl_ele_sigvv",ele.ele_sigvv())
+            addDataPoint(hist_data,"dupl_ele_NLay",ele.ele_nlay())
+            addDataPoint(hist_data,"dupl_ele_firstLay",ele.ele_firstlay())
+            addDataPoint(hist_data,"dupl_ele_lastLay",ele.ele_lastlay())
+
+            addDataPoint(hist_data,"dupl_ele_posZ",abs(ele.ele_pcaPosZ()))
+
+            if ele.fbrem() > 0 and ele.fbrem() < 1:
+                addDataPoint(hist_data,"dupl_ele_sigvv_vs_fbrem",(ele.fbrem(),ele.ele_sigvv()))
+                if hasattr(ele,"energyEE"):
+                    if ele.energyEE() < 2* ele.energy():
+                        addDataPoint(hist_data,"dupl_ele_EE_vs_fbrem",(ele.fbrem(),ele.energyEE()))
+                        addDataPoint(hist_data,"dupl_ele_Efrac_vs_fbrem",(ele.fbrem(),ele.energyEE()/ele.energy()))
+                        addDataPoint(hist_data,"dupl_ele_ET_vs_fbrem",(ele.fbrem(),ele.energyEE()/math.cosh(ele.eta())))
+
+            addDataPoint(hist_data,"dupl_ele_varZ",ele.ele_pcaEigSig3())
+            addDataPoint(hist_data,"dupl_ele_pcaSig1",ele.ele_pcaEigSig1())
+            addDataPoint(hist_data,"dupl_ele_pcaSig2",ele.ele_pcaEigSig2())
+            addDataPoint(hist_data,"dupl_ele_pcaSig3",ele.ele_pcaEigSig3())
+            addDataPoint(hist_data,"dupl_ele_pcaEig1",ele.ele_pcaEigVal1())
+            addDataPoint(hist_data,"dupl_ele_pcaEig2",ele.ele_pcaEigVal2())
+            addDataPoint(hist_data,"dupl_ele_pcaEig3",ele.ele_pcaEigVal3())
+
+            addDataPoint(hist_data,"dupl_ele_layEfrac10",ele.ele_layEfrac10())
+            addDataPoint(hist_data,"dupl_ele_layEfrac90",ele.ele_layEfrac90())
+            addDataPoint(hist_data,"dupl_ele_layEfrac10_wrt1",ele.ele_layEfrac10() - ele.ele_firstlay())
+            addDataPoint(hist_data,"dupl_ele_layEfrac90_wrt1",ele.ele_layEfrac90() - ele.ele_firstlay())
+            #addDataPoint(hist_data,"dupl_ele_outEnergyFrac",ele.ele_outEnergy()/ele.seedenergy())
+            #addDataPoint(hist_data,"dupl_ele_outEnergyFrac",ele.ele_outEnergy()/ele.energyEE())
+
+            addDataPoint(hist_data,"dupl_ele_depthCompat",ele.ele_depthCompat())
+            addDataPoint(hist_data,"dupl_ele_realDepth",ele.ele_realDepth())
+            addDataPoint(hist_data,"dupl_ele_predDepth",ele.ele_predDepth())
+            addDataPoint(hist_data,"dupl_ele_predDepthSigma",ele.ele_predDepthSigma())
+
+            addDataPoint(hist_data,"dupl_ele_EE4overE",ele.ele_EE4overEE())
+            addDataPoint(hist_data,"dupl_ele_FHoverE",ele.ele_FHoverEE())
+            addDataPoint(hist_data,"dupl_ele_HoverE",ele.ele_HoverEE())
+
+            addDataPoint(hist_data,"dupl_ele_numCl",ele.numClinSC())
+            ## track vars
+            addDataPoint(hist_data,"dupl_ele_EoverPout",ele.eEleClusterOverPout())
+            addDataPoint(hist_data,"dupl_ele_dEtaEle",ele.deltaEtaEleClusterTrackAtCalo())
+            addDataPoint(hist_data,"dupl_ele_dPhiEle",ele.deltaPhiEleClusterTrackAtCalo())
+
+            #if "qcd" in fname.lower(): break
+
         #print ele_match_ids
 
-        '''
         for gen in ele_match_ids:
             n_match = len(ele_match_ids[gen])
             gen_cnt += 1
@@ -401,8 +477,11 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
 
 
     hists = []
-    for data_name in hist_data:
-        print("Plotting hist for data: %s" %data_name)
+    print("Plotting hists")
+    print hist_data.keys()
+
+    for data_name in sorted(hist_data):
+        #print("Plotting hist for data: %s" %data_name)
         canv = ROOT.TCanvas("canv_" + data_name,data_name,800,600)
 
         if data_name in ranges:
