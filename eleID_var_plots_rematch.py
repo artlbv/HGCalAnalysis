@@ -132,6 +132,7 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             if ele.isEB(): continue
             if ele.ele_siguu() == -1: continue
             if ele.fbrem() < -1: continue
+            if ele.ele_nlay() < 20: continue
 
             #if ele.pt() < 5: continue
 
@@ -340,6 +341,13 @@ def main(fname = "hgcalNtuple-El15-100_noReClust.root"):
             addDataPoint(hist_data,"ele_EoverPout",ele.eEleClusterOverPout())
             addDataPoint(hist_data,"ele_dEtaEle",ele.deltaEtaEleClusterTrackAtCalo())
             addDataPoint(hist_data,"ele_dPhiEle",ele.deltaPhiEleClusterTrackAtCalo())
+
+            if hasattr(ele,"ele_isoring1"):
+                addDataPoint(hist_data,"ele_isoring1fE",ele.ele_isoring1()/ele.energyEE())
+                addDataPoint(hist_data,"ele_isoring2fE",ele.ele_isoring2()/ele.energyEE())
+                addDataPoint(hist_data,"ele_isoring3fE",ele.ele_isoring3()/ele.energyEE())
+                addDataPoint(hist_data,"ele_isoring4fE",ele.ele_isoring4()/ele.energyEE())
+                addDataPoint(hist_data,"ele_isoring5fE",ele.ele_isoring5()/ele.energyEE())
 
             #if "qcd" in fname.lower(): break
 
