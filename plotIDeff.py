@@ -4,6 +4,11 @@ import ROOT
 import phase2tdrStyle
 import numpy as np
 
+labels = {}
+
+labels["ele_pT"] = "p_{T}"
+labels["ele_eta"] = "|#eta|"
+
 def getScores(fname):
 
     treename = "TestTree"
@@ -26,7 +31,7 @@ def getScores(fname):
 
         #if event.classID == 0: sig_scores.append(event.BDT)
         if event.classID == 0:
-            #if abs(event.ele_deltaetaele) < 0.02: continue
+            #if abs(event.ele_deltaetaele) > 0.02: continue
             sig_scores.append(event.BDT)
         elif event.classID == 1:
             bkg_scores.append(event.BDT)
@@ -116,28 +121,33 @@ def getHistFromTree(tree, var = "ele_pT", cuts = "", hname = ""):
     hname_pref = 'h_' + var + '_' + hname
     #histList = [] # going to store sig_ref, sig_sel, bkg_ref, bkg_sel
 
-    if "pT" in var:
+    if "ele_pT" in var:
         #hRef = ROOT.TH1F(hname_pref + "_ref", "", 20, 10, 20)
         #hRef = ROOT.TH1F(hname_pref + "_ref", "", 20, 20, 80)
         hRef = ROOT.TH1F(hname_pref, "", 40, 10, 90)
-    elif "eta" in var:
+    elif "ele_eta" in var:
         var = "abs(" + var + ")"
         #var = "-log(tan((sqrt(ele_hgc_pcaPosX*ele_hgc_pcaPosX+ele_hgc_pcaPosY*ele_hgc_pcaPosY)/abs(ele_hgc_pcaPosZ))/2))"
         hRef = ROOT.TH1F(hname_pref, "", 40, 1.5, 3.0)
+    elif "ele_ET" in var:
+        hRef = ROOT.TH1F(hname_pref, "", 20, 0, 80)
     elif "Nvtx" in var:
-        hRef = ROOT.TH1F(hname_pref, "", 50, 100, 200)
+        hRef = ROOT.TH1F(hname_pref, "", 20, 100, 200)
     elif "BDT" in var:
         hRef = ROOT.TH1F(hname_pref, "", 100, -1, 1)
+    elif "ele_deltaetaele" in var:
+        hRef = ROOT.TH1F(hname_pref, "", 100, -0.1, 0.1)
     else:
-        hRef = ROOT.TH1F(hname_pref, "", 100, 0, 100)
+        hRef = ROOT.TH1F(hname_pref, "", 100, -100, 100)
 
     #hRef.Sumw2()
 
     tree.Draw(var + '>>' + hRef.GetName(),cuts,"e1 goff")
+    print "Got %i events in hist %s" %(hRef.GetEntries(), hname_pref)
     return hRef
 
 
-def plotEff(fname, score = "0."):
+def plotEff(fname, var = "ele_pT", score = "0."):
 
     treename = "TestTree"
     tfile = ROOT.TFile(fname)
@@ -148,23 +158,22 @@ def plotEff(fname, score = "0."):
     if not os.path.exists(outdir): os.makedirs(outdir)
     print "Storing output files in ", outdir
 
-    #var = "ele_pT"
-    var = "ele_eta"
-    #var = "Nvtx"
-
     otfile = ROOT.TFile(outdir + "/plots_" + var + ".root","recreate")
 
     # plot option
     plotOpt = 'e1'
 
     #cuts = "abs(ele_deltaetaele) < 0.02 &&"
-    #cuts = ""
-    cuts = "!(ele_sigmavv > 0.8 && ele_sigmauu > 0.7) && ele_hgc_nlay > 20 && "
+    cuts = ""
+    #cuts = "!(ele_sigmavv > 0.8 && ele_sigmauu > 0.7) && ele_hgc_nlay > 20 && "
+    #cuts = "abs(ele_deltaetaele) < 0.02 && !(ele_sigmavv > 0.8 && ele_sigmauu > 0.7) && ele_hgc_nlay > 20 && "
 
     hRef = getHistFromTree(tree,var,cuts + "classID == 0","refSig")
     hSel = getHistFromTree(tree,var,cuts + "classID == 0 && BDT > %f " % score ,"selSig")
 
-    cuts = ""
+    #cuts = ""
+    #cuts = "!(ele_sigmavv > 0.8 && ele_sigmauu > 0.7) && ele_hgc_nlay > 20 && "
+
     hRef2 = getHistFromTree(tree,var,cuts + "classID == 1","refBkg")
     hSel2 = getHistFromTree(tree,var,cuts + "classID == 1 && BDT > %f " % score,"selBkg")
 
@@ -177,8 +186,10 @@ def plotEff(fname, score = "0."):
 
     hRefEff = hRef.Clone(hRef.GetName()+'Eff')
     hRefEff.Divide(hRef)
-    hRefEff.GetXaxis().SetTitle(var)
+    label = labels[var] if var in labels else var
+    hRefEff.GetXaxis().SetTitle(label)
     hRefEff.GetYaxis().SetTitle("Efficiency")
+    hRefEff.GetYaxis().SetRangeUser(0.,1.2)
     hRefEff.Draw()
 
     tEff = ROOT.TEfficiency(hSel,hRef)
@@ -235,7 +246,8 @@ def plotHist(fname, var = "BDT"):
     #var = "ele_eta"
     #var = "Nvtx"
     #var = "ele_hgc_nlay"
-    var = "BDT"
+    #var = "BDT"
+    #var = "ele_deltaetaele"
 
     #cuts = "abs(ele_deltaetaele) < 0.02 &&"
     cuts = ""
@@ -248,7 +260,7 @@ def plotHist(fname, var = "BDT"):
     #cuts = "abs(ele_deltaetaele) < 0.01 &&"
     #cuts = "!(ele_sigmauu > 0.6 && ele_sigmavv > 0.8) && "
     #cuts = "!(ele_sigmauu > 0.6 && ele_sigmavv > 0.8) && ele_hgc_nlay > 20 && "
-    cuts = "!(ele_sigmavv > 0.8) && ele_hgc_nlay > 20 && "
+    #cuts = "!(ele_sigmavv > 0.8) && ele_hgc_nlay > 20 && "
     hRef3 = getHistFromTree(tree,var,cuts + "classID == 0","refSig2")
     hRef4 = getHistFromTree(tree,var,cuts + "classID == 1","refBkg2")
 
@@ -286,6 +298,27 @@ def plotHist(fname, var = "BDT"):
 
     otfile.Close()
 
+def plotROCs(rocs, names):
+
+    cname = "c"
+    canv = phase2tdrStyle.setCanvas()
+
+    for i, roc in enumerate(rocs):
+
+        if i == 0:
+            roc.Draw("apl")
+        else:
+            roc.Draw("pl")
+
+        roc.SetName(names[i])
+
+    phase2tdrStyle.drawCMS(True)
+    phase2tdrStyle.drawEnPu()
+
+    canv.Update()
+    canv.Draw()
+    ROOT.SetOwnership(canv,0)
+
 def main(fname = "/Users/artur/cernbox/www/HGCAL/reco/eleID/MVA/HGCTDRTMVA_1020_trackepshowerlonghgcaltdrV2DR01presel.root"):
 
     print "Reading file", fname
@@ -296,9 +329,15 @@ def main(fname = "/Users/artur/cernbox/www/HGCAL/reco/eleID/MVA/HGCTDRTMVA_1020_
     ## Calculate ROC and define WP
     sig_scores, bkg_scores = getScores(fname)
     score_wp95 = getWPscore(sig_scores, 95)
+    print "Rejecting bck:", sum(bkg_scores > score_wp95)/float(len(bkg_scores))
 
-    #plotEff(fname, score_wp95)
-    plotHist(fname)
+    var = "ele_pT"
+    #var = "ele_eta"
+    #var = "ele_ET"
+    #var = "Nvtx"
+
+    plotEff(fname, var, score_wp95)
+    #plotHist(fname, var)
 
     '''
     roc_data = getROC(sig_scores, bkg_scores)
