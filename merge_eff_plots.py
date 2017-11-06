@@ -1,18 +1,25 @@
 #!/usr/bin/env python
 import os, sys
 import ROOT
-import phase2tdrStyle
+#import phase2tdrStyle
+
+ROOT.gROOT.LoadMacro("/Users/artur/cernbox/HGCAL/cluster/cmssw/plot_style/HttStyles.cc")
+ROOT.gROOT.LoadMacro("/Users/artur/cernbox/HGCAL/cluster/cmssw/plot_style/CMS_lumi.C")
+
+ROOT.setTDRStyle()
+
 
 if __name__ == "__main__":
 
-    fname = "merge_v3_ele_pT.root"
+    fname = "merge_v4_ele_pT.root"
 
     tfile = ROOT.TFile(fname)
 
-    cname = "c"
-    canv = phase2tdrStyle.setCanvas()
-    canv.SetName(cname)
-    canv.SetTitle("")
+    #cname = "c"
+    #canv = phase2tdrStyle.setCanvas()
+    #canv.SetName(cname)
+    #canv.SetTitle("")
+    canv = ROOT.MakeCanvas("canv", "histograms", 800, 600)
 
     h_ele_pT_refSigEff = tfile.Get("h_ele_pT_refSigEff")
     h_ele_pT_refSig_Eff = tfile.Get("h_ele_pT_refSig_Eff")
@@ -27,17 +34,22 @@ if __name__ == "__main__":
     h_ele_pT_refBkg_Eff.Draw("same")
     h_ele_pT_refBkg_Eff.SetTitle("QCD")
 
-    '''
-    leg = canv.BuildLegend()
-    leg.Draw()
-    leg.SetX1(0.65)
-    leg.SetX2(0.9)
-    leg.SetY1(0.7)
-    leg.SetY2(0.9)
-    '''
+    #phase2tdrStyle.drawCMS(True)
+    #phase2tdrStyle.drawEnPu()
+    ROOT.CMS_lumi( canv, 4, 10 )
 
-    phase2tdrStyle.drawCMS(True)
-    phase2tdrStyle.drawEnPu()
+    ## Legend
+    leg = ROOT.TLegend(0.45,0.45,0.9,0.55)
+    ROOT.SetOwnership(leg,0)
+
+    leg.SetBorderSize(0)
+    #leg.SetTextFont(62)
+    #leg.SetTextSize(0.05)
+
+    leg.AddEntry(h_ele_pT_refSig_Eff,"DY: Z #rightarrow ee, <PU> = 200","pl")
+    leg.AddEntry(h_ele_pT_refBkg_Eff,"QCD, <PU> = 200","pl")
+
+    leg.Draw()
 
     canv.Update()
     canv.Draw()

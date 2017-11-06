@@ -1,8 +1,57 @@
 #!/usr/bin/env python
 import os, sys
 import ROOT
-import phase2tdrStyle
+#import phase2tdrStyle
+#import CMS_lumi, tdrstyle
 import numpy as np
+
+ROOT.gROOT.LoadMacro("/Users/artur/cernbox/HGCAL/cluster/cmssw/plot_style/HttStyles.cc")
+ROOT.gROOT.LoadMacro("/Users/artur/cernbox/HGCAL/cluster/cmssw/plot_style/CMS_lumi.C")
+
+ROOT.setTDRStyle()
+'''
+#set the tdr style
+#tdrstyle.setTDRStyle()
+### Settings for CMS label
+#change the CMS_lumi variables (see CMS_lumi.py)
+CMS_lumi.cmsText = "CMS Phase-2"
+CMS_lumi.writeExtraText = 1
+CMS_lumi.extraText = "Simulation Preliminary"
+CMS_lumi.lumi_sqrtS = "14 TeV" # used with iPeriod = 0, e.g. for simulation-only plots (default is an empty string)
+
+iPos = 11
+if( iPos==0 ): CMS_lumi.relPosX = 0.12
+iPeriod = 0
+
+def getCanvas(cname = "canv"):
+
+    H_ref = 600;
+    W_ref = 800;
+    W = W_ref
+    H  = H_ref
+    # references for T, B, L, R
+    T = 0.08*H_ref
+    B = 0.12*H_ref
+    L = 0.12*W_ref
+    R = 0.04*W_ref
+
+    canvas = ROOT.TCanvas(cname,cname,50,50,W,H)
+    ROOT.SetOwnership(canvas, 0)
+    canvas.SetFillColor(0)
+    canvas.SetBorderMode(0)
+    canvas.SetFrameFillStyle(0)
+    canvas.SetFrameBorderMode(0)
+    canvas.SetLeftMargin( L/W )
+    canvas.SetRightMargin( R/W )
+    canvas.SetTopMargin( T/H )
+    canvas.SetBottomMargin( B/H )
+    canvas.SetTickx(0)
+    canvas.SetTicky(0)
+
+    #CMS_lumi.CMS_lumi(canvas, iPeriod, iPos)
+
+    return canvas
+'''
 
 labels = {}
 
@@ -98,13 +147,14 @@ def plotROC(roc_data, grname = "gr"):
     print "Filled ROC graph with %i points" %(gr.GetN())
 
     cname = "c" + grname
-    canv = phase2tdrStyle.setCanvas()
+    #canv = phase2tdrStyle.setCanvas()
+    canv = getCanvas(cname)
     gr.Draw("apl")
     #ROOT.SetDirectory(gr,0)
     #gr.SetOwnership(0)
 
-    phase2tdrStyle.drawCMS(True)
-    phase2tdrStyle.drawEnPu()
+    #phase2tdrStyle.drawCMS(True)
+    #phase2tdrStyle.drawEnPu()
 
     canv.Update()
     canv.Draw()
@@ -182,32 +232,54 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     otfile.cd()
 
     cname = "c"
-    canv = phase2tdrStyle.setCanvas()
+    #canv = phase2tdrStyle.setCanvas()
+    #phase2tdrStyle.drawCMS(True)
+    #phase2tdrStyle.drawEnPu()
+    #canv = getCanvas(cname)
+    #CMS_lumi.CMS_lumi(canv, iPeriod, iPos)
+    canv = ROOT.MakeCanvas("canv", "histograms", 800, 600)
 
     hRefEff = hRef.Clone(hRef.GetName()+'Eff')
     hRefEff.Divide(hRef)
     label = labels[var] if var in labels else var
     hRefEff.GetXaxis().SetTitle(label)
-    hRefEff.GetYaxis().SetTitle("Efficiency")
-    hRefEff.GetYaxis().SetRangeUser(0.,1.2)
+    hRefEff.GetYaxis().SetTitle("Selection efficiency")
+    hRefEff.GetYaxis().SetRangeUser(0.,1.25)
+    hRefEff.SetLineWidth(0)
     hRefEff.Draw()
 
     tEff = ROOT.TEfficiency(hSel,hRef)
     tEff.SetName(hRef.GetName() + "_Eff")
     tEff.SetLineColor(ROOT.kBlue+2)
+    tEff.SetMarkerColor(ROOT.kBlue+2)
+    tEff.SetMarkerStyle(7)
     tEff.Draw("same")
 
     tEff2 = ROOT.TEfficiency(hSel2,hRef2)
     tEff2.SetName(hRef2.GetName() + "_Eff")
     tEff2.SetLineColor(ROOT.kRed+2)
+    tEff2.SetMarkerColor(ROOT.kRed+2)
+    tEff2.SetMarkerStyle(7)
     tEff2.Draw("same")
 
-    phase2tdrStyle.drawCMS(True)
-    phase2tdrStyle.drawEnPu()
+    ROOT.CMS_lumi( canv, 4, 10 )
 
     canv.Update()
     canv.Draw()
     ROOT.SetOwnership(canv,0)
+
+    ## Legend
+    leg = ROOT.TLegend(0.45,0.45,0.9,0.55)
+    ROOT.SetOwnership(leg,0)
+
+    leg.SetBorderSize(0)
+    #leg.SetTextFont(62)
+    #leg.SetTextSize(0.05)
+
+    leg.AddEntry(tEff,"DY: Z #rightarrow ee, <PU> = 200","pl")
+    leg.AddEntry(tEff2,"QCD, <PU> = 200","pl")
+
+    leg.Draw()
 
     hRefEff.Write()
 
