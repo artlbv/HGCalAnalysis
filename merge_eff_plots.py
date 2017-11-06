@@ -3,8 +3,8 @@ import os, sys
 import ROOT
 #import phase2tdrStyle
 
-ROOT.gROOT.LoadMacro("/Users/artur/cernbox/HGCAL/cluster/cmssw/plot_style/HttStyles.cc")
-ROOT.gROOT.LoadMacro("/Users/artur/cernbox/HGCAL/cluster/cmssw/plot_style/CMS_lumi.C")
+ROOT.gROOT.LoadMacro("plot_style/HttStyles.cc")
+ROOT.gROOT.LoadMacro("plot_style/CMS_lumi.C")
 
 ROOT.setTDRStyle()
 
