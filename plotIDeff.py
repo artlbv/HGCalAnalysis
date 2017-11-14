@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os, sys
 import ROOT
+from array import array
 #import phase2tdrStyle
 #import CMS_lumi, tdrstyle
 import numpy as np
@@ -9,54 +10,15 @@ ROOT.gROOT.LoadMacro("plot_style/HttStyles.cc")
 ROOT.gROOT.LoadMacro("plot_style/CMS_lumi.C")
 
 ROOT.setTDRStyle()
-'''
-#set the tdr style
-#tdrstyle.setTDRStyle()
-### Settings for CMS label
-#change the CMS_lumi variables (see CMS_lumi.py)
-CMS_lumi.cmsText = "CMS Phase-2"
-CMS_lumi.writeExtraText = 1
-CMS_lumi.extraText = "Simulation Preliminary"
-CMS_lumi.lumi_sqrtS = "14 TeV" # used with iPeriod = 0, e.g. for simulation-only plots (default is an empty string)
-
-iPos = 11
-if( iPos==0 ): CMS_lumi.relPosX = 0.12
-iPeriod = 0
-
-def getCanvas(cname = "canv"):
-
-    H_ref = 600;
-    W_ref = 800;
-    W = W_ref
-    H  = H_ref
-    # references for T, B, L, R
-    T = 0.08*H_ref
-    B = 0.12*H_ref
-    L = 0.12*W_ref
-    R = 0.04*W_ref
-
-    canvas = ROOT.TCanvas(cname,cname,50,50,W,H)
-    ROOT.SetOwnership(canvas, 0)
-    canvas.SetFillColor(0)
-    canvas.SetBorderMode(0)
-    canvas.SetFrameFillStyle(0)
-    canvas.SetFrameBorderMode(0)
-    canvas.SetLeftMargin( L/W )
-    canvas.SetRightMargin( R/W )
-    canvas.SetTopMargin( T/H )
-    canvas.SetBottomMargin( B/H )
-    canvas.SetTickx(0)
-    canvas.SetTicky(0)
-
-    #CMS_lumi.CMS_lumi(canvas, iPeriod, iPos)
-
-    return canvas
-'''
 
 labels = {}
 
-labels["ele_pT"] = "p_{T}"
+labels["ele_pT"] = "p_{T} (GeV)"
 labels["ele_eta"] = "|#eta|"
+labels["Nvtx"] = "Number of reco. vertices"
+#labels["NPU"] = "Number of gen. vertices"
+labels["NPU"] = "Number of PU interactions"
+labels["PU_density"] = "Density (events / mm)"
 
 def getScores(fname):
 
@@ -77,10 +39,12 @@ def getScores(fname):
         #if (event.ele_sigmauu > 0.7 and event.ele_sigmavv > 0.8) : continue
         #if event.ele_sigmavv > 0.8 : continue
         #if event.ele_hgc_nlay < 20: continue
+        #if event.ele_ET < 5: continue
 
         #if event.classID == 0: sig_scores.append(event.BDT)
         if event.classID == 0:
             #if abs(event.ele_deltaetaele) > 0.02: continue
+            #if event.ele_ET < 5: continue
             sig_scores.append(event.BDT)
         elif event.classID == 1:
             bkg_scores.append(event.BDT)
@@ -174,15 +138,26 @@ def getHistFromTree(tree, var = "ele_pT", cuts = "", hname = ""):
     if "ele_pT" in var:
         #hRef = ROOT.TH1F(hname_pref + "_ref", "", 20, 10, 20)
         #hRef = ROOT.TH1F(hname_pref + "_ref", "", 20, 20, 80)
-        hRef = ROOT.TH1F(hname_pref, "", 40, 10, 90)
+        #hRef = ROOT.TH1F(hname_pref, "", 40, 10, 90)
+        #pt_bins = range(10,60,2) + range(60,80,5)
+        pt_bins = range(10,50,2) + range(50,80,5)
+        hRef = ROOT.TH1F(hname_pref, "", len(pt_bins)-1, array('f',pt_bins))
     elif "ele_eta" in var:
         var = "abs(" + var + ")"
         #var = "-log(tan((sqrt(ele_hgc_pcaPosX*ele_hgc_pcaPosX+ele_hgc_pcaPosY*ele_hgc_pcaPosY)/abs(ele_hgc_pcaPosZ))/2))"
-        hRef = ROOT.TH1F(hname_pref, "", 40, 1.5, 3.0)
+        #hRef = ROOT.TH1F(hname_pref, "", 40, 1.5, 3.0)
+        #hRef = ROOT.TH1F(hname_pref, "", 40, 0, 1.5)
+        hRef = ROOT.TH1F(hname_pref, "", 60, 0, 3.0)
     elif "ele_ET" in var:
-        hRef = ROOT.TH1F(hname_pref, "", 20, 0, 80)
+        hRef = ROOT.TH1F(hname_pref, "", 20, 0, 60)
     elif "Nvtx" in var:
-        hRef = ROOT.TH1F(hname_pref, "", 20, 100, 200)
+        hRef = ROOT.TH1F(hname_pref, "", 16, 105, 185)
+    elif "PU_density" in var:
+        hRef = ROOT.TH1F(hname_pref, "", 10, 0, 1.3)
+    elif "NPU" in var:
+        #hRef = ROOT.TH1F(hname_pref, "", 18, 155, 245)
+        bins = range(155,175,10) + range(175,245,10) + range(245,255,10)
+        hRef = ROOT.TH1F(hname_pref, "", len(bins)-1, array('f',bins))
     elif "BDT" in var:
         hRef = ROOT.TH1F(hname_pref, "", 100, -1, 1)
     elif "ele_deltaetaele" in var:
@@ -204,7 +179,7 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     tree = tfile.Get(treename)
     print "Found tree " + treename + " with %i events" % tree.GetEntries()
 
-    outdir = os.path.basename(fname).replace(".root","")
+    outdir = os.path.basename(fname).replace(".root","_plotScale")
     if not os.path.exists(outdir): os.makedirs(outdir)
     print "Storing output files in ", outdir
 
@@ -215,6 +190,7 @@ def plotEff(fname, var = "ele_pT", score = "0."):
 
     #cuts = "abs(ele_deltaetaele) < 0.02 &&"
     cuts = ""
+    #cuts = "ele_ET > 5 &&"
     #cuts = "!(ele_sigmavv > 0.8 && ele_sigmauu > 0.7) && ele_hgc_nlay > 20 && "
     #cuts = "abs(ele_deltaetaele) < 0.02 && !(ele_sigmavv > 0.8 && ele_sigmauu > 0.7) && ele_hgc_nlay > 20 && "
 
@@ -255,6 +231,10 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     tEff.SetMarkerStyle(7)
     tEff.Draw("same")
 
+    #print hSel2.GetNbinsX(), hRef2.GetNbinsX()
+    hSel2.Scale(10)
+    #print hSel2.GetNbinsX(), hRef2.GetNbinsX()
+    #hRef2.Scale(1/10.)
     tEff2 = ROOT.TEfficiency(hSel2,hRef2)
     tEff2.SetName(hRef2.GetName() + "_Eff")
     tEff2.SetLineColor(ROOT.kRed+2)
@@ -269,15 +249,21 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     ROOT.SetOwnership(canv,0)
 
     ## Legend
-    leg = ROOT.TLegend(0.45,0.45,0.9,0.55)
+    #leg = ROOT.TLegend(0.45,0.45,0.9,0.55)
+    #leg = ROOT.TLegend(0.65,0.4,1.,0.65)
+    leg = ROOT.TLegend(0.6,0.4,0.9,0.65)
     ROOT.SetOwnership(leg,0)
 
     leg.SetBorderSize(0)
     #leg.SetTextFont(62)
     #leg.SetTextSize(0.05)
+    leg.SetFillStyle(0)
 
-    leg.AddEntry(tEff,"DY: Z #rightarrow ee, <PU> = 200","pl")
-    leg.AddEntry(tEff2,"QCD, <PU> = 200","pl")
+    #leg.AddEntry(tEff,"DY: Z #rightarrow ee, <PU> = 200","pl")
+    #leg.AddEntry(tEff2,"QCD, <PU> = 200","pl")
+    leg.SetHeader("<PU> = 200")
+    leg.AddEntry(tEff,"Z #rightarrow ee","pl")
+    leg.AddEntry(tEff2,"QCD multijets x10","pl")
 
     leg.Draw()
 
@@ -294,7 +280,7 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     canv.SaveAs(outdir + "/eff_" + var + ".pdf")
     #canv.SaveAs(outdir + "/eff_" + var + ".root")
 
-    q = raw_input("q")
+    #q = raw_input("q")
 
     otfile.Close()
 
@@ -394,21 +380,31 @@ def plotROCs(rocs, names):
 def main(fname = "/Users/artur/cernbox/www/HGCAL/reco/eleID/MVA/HGCTDRTMVA_1020_trackepshowerlonghgcaltdrV2DR01presel.root"):
 
     print "Reading file", fname
-    outdir = os.path.basename(fname).replace(".root","")
+    '''
+    outdir = os.path.basename(fname).replace(".root","_plots/")
     if not os.path.exists(outdir): os.makedirs(outdir)
     print "Storing output files in ", outdir
+    '''
 
     ## Calculate ROC and define WP
     sig_scores, bkg_scores = getScores(fname)
     score_wp95 = getWPscore(sig_scores, 95)
+    #score_wp95 = getWPscore(sig_scores, 80)
     print "Rejecting bck:", sum(bkg_scores > score_wp95)/float(len(bkg_scores))
 
-    var = "ele_pT"
+    #var = "ele_pT"
     #var = "ele_eta"
     #var = "ele_ET"
     #var = "Nvtx"
+    #var = "PU_density"
+    #var = "NPU"
+    #plotEff(fname, var, score_wp95)
 
-    plotEff(fname, var, score_wp95)
+    variabs = ["ele_pT","ele_eta","Nvtx","PU_density","NPU","ele_ET"]
+
+    for var in variabs:
+        plotEff(fname, var, score_wp95)
+
     #plotHist(fname, var)
 
     '''
