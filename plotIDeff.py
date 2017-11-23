@@ -2,19 +2,19 @@
 import os, sys
 import ROOT
 from array import array
-#import phase2tdrStyle
+import phase2tdrStyle
 #import CMS_lumi, tdrstyle
 import numpy as np
 
-ROOT.gROOT.LoadMacro("plot_style/HttStyles.cc")
-ROOT.gROOT.LoadMacro("plot_style/CMS_lumi.C")
-
-ROOT.setTDRStyle()
+#ROOT.gROOT.LoadMacro("plot_style/HttStyles.cc")
+#ROOT.gROOT.LoadMacro("plot_style/CMS_lumi.C")
+#ROOT.setTDRStyle()
 
 labels = {}
 
 labels["ele_pT"] = "p_{T} (GeV)"
 labels["ele_eta"] = "|#eta|"
+labels["ele_scleta"] = "|#eta|"
 labels["Nvtx"] = "Number of reco. vertices"
 #labels["NPU"] = "Number of gen. vertices"
 labels["NPU"] = "Number of PU interactions"
@@ -69,7 +69,7 @@ def getScores(fname):
 def getWPscore(scores, eff = 50):
 
     wp_score =  np.percentile(scores,100-eff)
-    print "Score for %i efficiency is %f" %(eff,wp_score)
+    print "Score for %0.2f efficiency is %0.3f" %(eff,wp_score)
 
     return wp_score
 
@@ -111,14 +111,14 @@ def plotROC(roc_data, grname = "gr"):
     print "Filled ROC graph with %i points" %(gr.GetN())
 
     cname = "c" + grname
-    #canv = phase2tdrStyle.setCanvas()
-    canv = getCanvas(cname)
+    canv = phase2tdrStyle.setCanvas()
+    #canv = getCanvas(cname)
     gr.Draw("apl")
     #ROOT.SetDirectory(gr,0)
     #gr.SetOwnership(0)
 
-    #phase2tdrStyle.drawCMS(True)
-    #phase2tdrStyle.drawEnPu()
+    phase2tdrStyle.drawCMS(True)
+    phase2tdrStyle.drawEnPu()
 
     canv.Update()
     canv.Draw()
@@ -144,10 +144,14 @@ def getHistFromTree(tree, var = "ele_pT", cuts = "", hname = ""):
         hRef = ROOT.TH1F(hname_pref, "", len(pt_bins)-1, array('f',pt_bins))
     elif "ele_eta" in var:
         var = "abs(" + var + ")"
-        #var = "-log(tan((sqrt(ele_hgc_pcaPosX*ele_hgc_pcaPosX+ele_hgc_pcaPosY*ele_hgc_pcaPosY)/abs(ele_hgc_pcaPosZ))/2))"
-        #hRef = ROOT.TH1F(hname_pref, "", 40, 1.5, 3.0)
+        hRef = ROOT.TH1F(hname_pref, "", 27, 1.55, 2.9)
         #hRef = ROOT.TH1F(hname_pref, "", 40, 0, 1.5)
-        hRef = ROOT.TH1F(hname_pref, "", 60, 0, 3.0)
+        #hRef = ROOT.TH1F(hname_pref, "", 60, 0, 3.0)
+        #bins = range(15,29,1)/10 + [2.9,3.0]
+        #hRef = ROOT.TH1F(hname_pref, "", len(bins)-1, array('f',bins))
+    elif "ele_scleta" in var:
+        var = "abs(" + var + ")"
+        hRef = ROOT.TH1F(hname_pref, "", 24, 1.6, 2.8)
     elif "ele_ET" in var:
         hRef = ROOT.TH1F(hname_pref, "", 20, 0, 60)
     elif "Nvtx" in var:
@@ -179,7 +183,7 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     tree = tfile.Get(treename)
     print "Found tree " + treename + " with %i events" % tree.GetEntries()
 
-    outdir = os.path.basename(fname).replace(".root","_plotScale")
+    outdir = os.path.basename(fname).replace(".root","_plotScale5")
     if not os.path.exists(outdir): os.makedirs(outdir)
     print "Storing output files in ", outdir
 
@@ -208,12 +212,12 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     otfile.cd()
 
     cname = "c"
-    #canv = phase2tdrStyle.setCanvas()
+    canv = phase2tdrStyle.setCanvas()
     #phase2tdrStyle.drawCMS(True)
     #phase2tdrStyle.drawEnPu()
     #canv = getCanvas(cname)
     #CMS_lumi.CMS_lumi(canv, iPeriod, iPos)
-    canv = ROOT.MakeCanvas("canv", "histograms", 800, 600)
+    #canv = ROOT.MakeCanvas("canv", "histograms", 800, 600)
 
     hRefEff = hRef.Clone(hRef.GetName()+'Eff')
     hRefEff.Divide(hRef)
@@ -232,7 +236,8 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     tEff.Draw("same")
 
     #print hSel2.GetNbinsX(), hRef2.GetNbinsX()
-    hSel2.Scale(10)
+    #hSel2.Scale(5)
+    hSel2.Scale(5)
     #print hSel2.GetNbinsX(), hRef2.GetNbinsX()
     #hRef2.Scale(1/10.)
     tEff2 = ROOT.TEfficiency(hSel2,hRef2)
@@ -242,16 +247,19 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     tEff2.SetMarkerStyle(7)
     tEff2.Draw("same")
 
-    ROOT.CMS_lumi( canv, 4, 10 )
+    #ROOT.CMS_lumi( canv, 4, 10 )
 
     canv.Update()
     canv.Draw()
     ROOT.SetOwnership(canv,0)
 
+    phase2tdrStyle.drawCMS(True)
+    phase2tdrStyle.drawEnPu(pileup = 200)
+
     ## Legend
     #leg = ROOT.TLegend(0.45,0.45,0.9,0.55)
     #leg = ROOT.TLegend(0.65,0.4,1.,0.65)
-    leg = ROOT.TLegend(0.6,0.4,0.9,0.65)
+    leg = ROOT.TLegend(0.6,0.4,0.95,0.7)
     ROOT.SetOwnership(leg,0)
 
     leg.SetBorderSize(0)
@@ -261,9 +269,11 @@ def plotEff(fname, var = "ele_pT", score = "0."):
 
     #leg.AddEntry(tEff,"DY: Z #rightarrow ee, <PU> = 200","pl")
     #leg.AddEntry(tEff2,"QCD, <PU> = 200","pl")
-    leg.SetHeader("<PU> = 200")
-    leg.AddEntry(tEff,"Z #rightarrow ee","pl")
-    leg.AddEntry(tEff2,"QCD multijets x10","pl")
+    #leg.SetHeader("<PU> = 200")
+    #leg.SetHeader("10 < p_{T} < 20 GeV, 1.6 < |#eta| < 2.8")
+    leg.SetHeader("p_{T} > 20 GeV, 1.6 < |#eta| < 2.8")
+    leg.AddEntry(tEff,"Z #rightarrow ee","ple")
+    leg.AddEntry(tEff2,"QCD multijets x5","ple")
 
     leg.Draw()
 
@@ -400,7 +410,7 @@ def main(fname = "/Users/artur/cernbox/www/HGCAL/reco/eleID/MVA/HGCTDRTMVA_1020_
     #var = "NPU"
     #plotEff(fname, var, score_wp95)
 
-    variabs = ["ele_pT","ele_eta","Nvtx","PU_density","NPU","ele_ET"]
+    variabs = ["ele_pT","ele_eta","ele_scleta","Nvtx","PU_density","NPU","ele_ET"]
 
     for var in variabs:
         plotEff(fname, var, score_wp95)
