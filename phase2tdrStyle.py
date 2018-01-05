@@ -23,22 +23,22 @@ gStyle.SetOptTitle(0)
 def setCanvas(split=False):
 
     # create canvas
-    can = TCanvas("can", "can", 800, 800 if split else 600)    
+    can = TCanvas("can", "can", 800, 800 if split else 600)
     if split:
-        can.Divide(1, 2)        
+        can.Divide(1, 2)
         can.GetPad(1).SetPad('Top', '', 0., 0.25, 1.0, 1.0, 0, -1, 0)
         can.GetPad(1).SetTopMargin(0.069)
         can.GetPad(1).SetBottomMargin(0.0184)
         can.GetPad(1).SetRightMargin(0.046)
         can.GetPad(1).SetLeftMargin(0.138)
-        can.GetPad(1).SetTicks(1, 1)        
+        can.GetPad(1).SetTicks(1, 1)
         can.GetPad(2).SetPad("Bottom", '', 0., 0., 1.0, 0.25, 0, -1, 0)
         can.GetPad(2).SetTopMargin(0.0092)
         can.GetPad(2).SetBottomMargin(0.368)
         can.GetPad(2).SetRightMargin(0.046)
         can.GetPad(2).SetLeftMargin(0.138)
-        can.GetPad(2).SetTicks(1, 1)     
-    else:   
+        can.GetPad(2).SetTicks(1, 1)
+    else:
         can.GetPad(0).SetTopMargin(0.069)
         can.GetPad(0).SetRightMargin(0.046)
         can.GetPad(0).SetLeftMargin(0.138)
@@ -50,17 +50,17 @@ def setCanvas(split=False):
     return can
 
 def draw(hist, drawhist=False, ratio=False, log=False):
-        
+
     # create canvas
     can = setCanvas(ratio)
     if log:
         can.GetPad(ratio).SetLogy()
-        
+
     # draw histograms
     drawOption = 'HIST' if drawhist else 'E'
     for ih, h in enumerate(hist):
         h.Draw(drawOption if ih == 0 else drawOption+', SAME')
-        formatHisto(h)          
+        formatHisto(h)
 
     # create ratio wrt hist[0]
     unc = hist[0].Clone('unc')
@@ -79,16 +79,16 @@ def draw(hist, drawhist=False, ratio=False, log=False):
             if hist[0].GetBinContent(i) > 0:
                 unc.SetBinError(i, hist[0].GetBinError(i)/hist[0].GetBinContent(i))
         formatRatio(unc)
-        unc.Draw('E2')        
+        unc.Draw('E2')
         for ih, h in enumerate(hist[1:]):
             hratio[ih] = h.Clone('hratio_%d'%ih)
             hratio[ih].Divide(hist[0])
             hratio[ih].Draw('PE0, SAME')
 
     can.Update()
-    can.GetPad(ratio).RedrawAxis()    
+    can.GetPad(ratio).RedrawAxis()
     can.cd(ratio)
-    
+
     # return objects created by the draw() function:
     # can    -> TCanvas
     # unc    -> TH1 with uncertainty on hist[0]     (meaningful only if ratio = True)
@@ -115,17 +115,16 @@ def formatRatio(h):
     h.GetXaxis().SetTitleOffset(1.0)
     h.GetXaxis().SetLabelSize(0.138862490654)
     h.GetXaxis().SetLabelOffset(0.0150851774961)
-    
+
     h.GetYaxis().SetTitleSize(0.138862490654)
     h.GetYaxis().SetLabelSize(0.138862490654)
     h.GetYaxis().SetTitleOffset(0.440833330154)
     h.GetYaxis().SetTitleOffset(0.440833330154)
-    
+
     h.GetYaxis().SetNdivisions(505)
     h.GetYaxis().SetRangeUser(0.4, 1.6)
 
-def drawCMS(onTop=False):
-    text='Phase-2 Simulation'
+def drawCMS(onTop=False, text='Phase-2 Simulation'):
     latex = TLatex()
     latex.SetNDC()
     latex.SetTextFont(62)
@@ -134,7 +133,7 @@ def drawCMS(onTop=False):
     latex.SetTextSize(0.0414)
     latex.SetTextFont(52)
     latex.DrawLatex(0.26625, 0.85 if not onTop else 0.94, text)
-    
+
 def drawEnPu(pileup=None, lumi=None):
     latex = TLatex()
     latex.SetNDC()

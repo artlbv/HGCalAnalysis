@@ -2,13 +2,13 @@
 import os, sys
 import ROOT
 from array import array
-import phase2tdrStyle
+#import phase2tdrStyle
 #import CMS_lumi, tdrstyle
 import numpy as np
 
-#ROOT.gROOT.LoadMacro("plot_style/HttStyles.cc")
-#ROOT.gROOT.LoadMacro("plot_style/CMS_lumi.C")
-#ROOT.setTDRStyle()
+ROOT.gROOT.LoadMacro("plot_style/HttStyles.cc")
+ROOT.gROOT.LoadMacro("plot_style/CMS_lumi.C")
+ROOT.setTDRStyle()
 
 labels = {}
 
@@ -111,14 +111,14 @@ def plotROC(roc_data, grname = "gr"):
     print "Filled ROC graph with %i points" %(gr.GetN())
 
     cname = "c" + grname
-    canv = phase2tdrStyle.setCanvas()
-    #canv = getCanvas(cname)
+    #canv = phase2tdrStyle.setCanvas()
+    canv = getCanvas(cname)
     gr.Draw("apl")
     #ROOT.SetDirectory(gr,0)
     #gr.SetOwnership(0)
 
-    phase2tdrStyle.drawCMS(True)
-    phase2tdrStyle.drawEnPu()
+    #phase2tdrStyle.drawCMS(True)
+    #phase2tdrStyle.drawEnPu()
 
     canv.Update()
     canv.Draw()
@@ -144,9 +144,10 @@ def getHistFromTree(tree, var = "ele_pT", cuts = "", hname = ""):
         hRef = ROOT.TH1F(hname_pref, "", len(pt_bins)-1, array('f',pt_bins))
     elif "ele_eta" in var:
         var = "abs(" + var + ")"
-        hRef = ROOT.TH1F(hname_pref, "", 27, 1.55, 2.9)
+        #hRef = ROOT.TH1F(hname_pref, "", 27, 1.55, 2.9)
         #hRef = ROOT.TH1F(hname_pref, "", 40, 0, 1.5)
         #hRef = ROOT.TH1F(hname_pref, "", 60, 0, 3.0)
+        hRef = ROOT.TH1F(hname_pref, "", 27, 1.6, 2.8)
         #bins = range(15,29,1)/10 + [2.9,3.0]
         #hRef = ROOT.TH1F(hname_pref, "", len(bins)-1, array('f',bins))
     elif "ele_scleta" in var:
@@ -183,7 +184,7 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     tree = tfile.Get(treename)
     print "Found tree " + treename + " with %i events" % tree.GetEntries()
 
-    outdir = os.path.basename(fname).replace(".root","_plotScale5")
+    outdir = os.path.basename(fname).replace(".root","_plotsTDR2/Scale5/")
     if not os.path.exists(outdir): os.makedirs(outdir)
     print "Storing output files in ", outdir
 
@@ -212,12 +213,12 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     otfile.cd()
 
     cname = "c"
-    canv = phase2tdrStyle.setCanvas()
+    #canv = phase2tdrStyle.setCanvas()
     #phase2tdrStyle.drawCMS(True)
     #phase2tdrStyle.drawEnPu()
     #canv = getCanvas(cname)
     #CMS_lumi.CMS_lumi(canv, iPeriod, iPos)
-    #canv = ROOT.MakeCanvas("canv", "histograms", 800, 600)
+    canv = ROOT.MakeCanvas("canv", "histograms", 800, 600)
 
     hRefEff = hRef.Clone(hRef.GetName()+'Eff')
     hRefEff.Divide(hRef)
@@ -248,13 +249,14 @@ def plotEff(fname, var = "ele_pT", score = "0."):
     tEff2.Draw("same")
 
     #ROOT.CMS_lumi( canv, 4, 10 )
+    ROOT.CMS_lumi( canv, 4, 0 )
 
     canv.Update()
     canv.Draw()
     ROOT.SetOwnership(canv,0)
 
-    phase2tdrStyle.drawCMS(True)
-    phase2tdrStyle.drawEnPu(pileup = 200)
+    #phase2tdrStyle.drawCMS(True)
+    #phase2tdrStyle.drawEnPu(pileup = 200)
 
     ## Legend
     #leg = ROOT.TLegend(0.45,0.45,0.9,0.55)
@@ -398,22 +400,30 @@ def main(fname = "/Users/artur/cernbox/www/HGCAL/reco/eleID/MVA/HGCTDRTMVA_1020_
 
     ## Calculate ROC and define WP
     sig_scores, bkg_scores = getScores(fname)
-    score_wp95 = getWPscore(sig_scores, 95)
-    #score_wp95 = getWPscore(sig_scores, 80)
-    print "Rejecting bck:", sum(bkg_scores > score_wp95)/float(len(bkg_scores))
+    score_wp = getWPscore(sig_scores, 95)
+    #score_wp = getWPscore(sig_scores, 80)
+    print "Rejecting bck:", sum(bkg_scores > score_wp)/float(len(bkg_scores))
 
+    #score_wp = 0.988#0.983
+
+    '''
+    bkg_eff = 0.1
+    score = getWPscore(bkg_scores, bkg_eff)
+    sig_eff = sum(sig_scores > score)/float(len(sig_scores))
+    print "Bkg eff %0.2f, sig eff %0.2f, score %0.3f" %(bkg_eff, sig_eff, score)
+    '''
     #var = "ele_pT"
     #var = "ele_eta"
     #var = "ele_ET"
     #var = "Nvtx"
     #var = "PU_density"
     #var = "NPU"
-    #plotEff(fname, var, score_wp95)
+    #plotEff(fname, var, score_wp)
 
     variabs = ["ele_pT","ele_eta","ele_scleta","Nvtx","PU_density","NPU","ele_ET"]
 
     for var in variabs:
-        plotEff(fname, var, score_wp95)
+        plotEff(fname, var, score_wp)
 
     #plotHist(fname, var)
 

@@ -17,7 +17,7 @@ CMS_lumi( TPad* pad, int iPeriod, int iPosX )
   if( iPosX/10==1 ) alignX_=1;
   if( iPosX/10==2 ) alignX_=2;
   if( iPosX/10==3 ) alignX_=3;
-  //if( iPosX == 0  ) relPosX = 0.12;
+  if( iPosX == 0  ) relPosX = 0.12;
   int align_ = 10*alignX_ + alignY_;
 
   float H = pad->GetWh();
@@ -52,7 +52,7 @@ CMS_lumi( TPad* pad, int iPeriod, int iPosX )
   else if ( iPeriod==4 )
     {
       lumiText += lumi_13TeV;
-      lumiText += "(14 TeV)";
+      lumiText += "14 TeV, 200 PU";
     }
   else if ( iPeriod==7 )
     { 
